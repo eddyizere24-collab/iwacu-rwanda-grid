@@ -1,45 +1,28 @@
-# STATUS — Algorithm lock (30 Ukwakira 2026 14:15 CAT)
+# STATUS — WORK ORDER 02 (30 Ukwakira 2026 19:20 CAT)
 
-## OVERALL: 40%
-Algorithm locked. GH4 chunks + pyramid built. Full A1–A7 SEED-TEST not yet run in Actions.
+## OVERALL: 48%
 
 ## TABLE
 | Item | status | evidence |
 |------|--------|----------|
-| Algorithm | DONE-UNVERIFIED | runtime/locate_v2.ts |
-| GH4 chunks | DONE-VERIFIED | 50 prefixes, ~3.3 MB gz |
-| Summary pyramid | DONE-VERIFIED | **39.3 KB gz** (≤300 KB target) |
-| never_primary | IN PROGRESS | force applied; CI recount |
-| CI workflow | DONE-UNVERIFIED | .github/workflows/grid.yml |
-| A1–A7 | NOT STARTED | needs Actions matrix |
-| Demo v2 | IN PROGRESS | |
+| G1 scripts | DONE-VERIFIED | scripts/build_algo_grid.py (10318 B), validate_district.py (11746 B), aggregate.py (4370 B) |
+| G2 country polygon | PARTIAL | geoBoundaries ADM0; meta + kivu CSV committed; full geojson built in Actions |
+| G2 kivu points | DONE-VERIFIED | data/kivu_test_points.csv |
+| G3 smoke/full | NOT STARTED | nta Actions run URL |
+| G4 size proof | PARTIAL | local max GH4 gz ~138 KB |
+| G5 A1 interior/border | UNVERIFIED | |
+| G6 46.9 vs 93 | UNVERIFIED | |
+| G7 deploy | BLOCKED | A1-A7 not PASS |
 
-## Algorithm (locked — no deviation without measurement)
-- Input accuracy a (m, Android 68% radius)
-- σ = a / 1.51; a ≤ 10 m → point lookup
-- precision p: 7 if σ≤450 m; 6 if σ≤1.8 km; else 5
-- Cells whose centres within 3σ; weight w = exp(−d²/(2σ²))
-- P(village) = Σ w·share / Σ w; hierarchy = sum over member villages
-- Chosen level: finest with top-1 ≥ τ=0.80; else coarser
-- Always top 3 villages + full path; never empty
-- Chunks keyed by **geohash-4** (≤4 files / lookup)
-- Outside country bbox → flag `outside_rwanda` (Kivu-inside = INSIDE)
-
-## Why old 46.9% @ 500 m vs PostGIS ~93%
-Old grid used single primary cell + scored vs **origin** village after noise (not PIP at noisy point). At 500 m the true village often changes. PostGIS border suite kept points inside polygons. New Gaussian weights + PIP truth + level backoff fix this class of error.
+## G2 Country polygon
+- **Source ADM0 URL:** https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/RWA/ADM0/geoBoundaries-RWA-ADM0.geojson
+- **Kivu border:** geoBoundaries RWA ADM0 international boundary through Lake Kivu
+- Area ~24,624 km2 (0.004 deg buffer)
+- Raw ADM0: 63 centroids outside; buffer 0.004: 5 residual; CI script uses buffer 0.01
+- data/kivu_test_points.csv: 25 INSIDE + 25 OUTSIDE + neighbors in Burundi/Tanzania/Uganda/DRC
 
 ## Seeds
-- SEED-TUNE = 424242
-- SEED-TEST = 20261030
+SEED-TUNE=424242 · SEED-TEST=20261030
 
-## Sizes
-- Pyramid: 39.3 KB gz
-- GH4 total: ~3.3 MB gz (50 files, mean ~65 KB)
-
-## Acceptance A1–A7
-All **UNVERIFIED** until Actions validate job completes on SEED-TEST with PIP ground truth.
-
-## Next
-1. Complete build_algo_grid.py + validate_district.py (PIP)
-2. Run workflow; collect run URL
-3. Fix failing district×noise slices; redeploy demo
+## A1–A7
+All **UNVERIFIED** (no Actions run URL with tables).

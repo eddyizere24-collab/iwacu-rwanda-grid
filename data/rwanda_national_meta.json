@@ -1,0 +1,15 @@
+{
+  "source_adm0_url": "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/gbOpen/RWA/ADM0/geoBoundaries-RWA-ADM0.geojson",
+  "source_name": "geoBoundaries gbOpen RWA ADM0",
+  "source_kivu_border": "geoBoundaries RWA ADM0 international boundary through Lake Kivu",
+  "adm0_area_km2_approx": 24624.1,
+  "buffer_deg": 0.004,
+  "villages_uncovered_centroids_raw_adm0": 63,
+  "villages_uncovered_after_buffer_0.004": 5,
+  "uncovered_sample_ids": ["32010107", "44070101", "44100201", "57140204", "57140205"],
+  "sha256_national_geojson": "b210a6366d492a03bdf33d24d8c01f713f9bafa66bb239ea4264f566799ad0a8",
+  "bytes": 907421,
+  "kivu_inside_points": 25,
+  "kivu_outside_points": 25,
+  "note": "Full rwanda_national.geojson generated in Actions by scripts/build_algo_grid.py (buffer 0.01). Local sandbox OOM on village union; ADM0 is authoritative for international boundary including Kivu."
+}
