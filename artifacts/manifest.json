@@ -1,0 +1,10 @@
+{
+  "dataset_version": "2026.10.30.3",
+  "village_total": 14823,
+  "villages_never_primary": 0,
+  "total_cells": 1166319,
+  "total_bytes_raw": 71700084,
+  "total_bytes_gzip": 3825837,
+  "method": "adaptive-geohash-7/8 exact-area-border v3",
+  "note": "Full per-district JSON/gz built locally in sandbox; push via release or LFS if needed"
+}

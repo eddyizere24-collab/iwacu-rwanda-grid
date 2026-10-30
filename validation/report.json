@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-30",
+  "method": "100 centroids/district, noise on coordinates, gh7 primary lookup",
+  "total_points": 21000,
+  "samples": 3000,
+  "national_hit_rate_pct": {
+    "0": 98.6,
+    "20": 98.3,
+    "100": 94.7,
+    "500": 46.9,
+    "2000": 5.5,
+    "5000": 1.3,
+    "20000": 0.0
+  },
+  "note": "Centroid-based (not full PIP). Full PIP 15k+ deferred to GH Actions (sandbox 1.2GB RAM).",
+  "gate_20m_hit_pct": 98.3
+}

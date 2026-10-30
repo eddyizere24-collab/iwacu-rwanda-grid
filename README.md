@@ -1,30 +1,39 @@
 # iwacu-rwanda-grid
 
-National adaptive grid index for **IWACU RWANDA 2**.
+National adaptive geohash index for **IWACU RWANDA 2**.
 
-Public data only. No secrets. Separate from the main app repo so Vercel is never triggered.
+Public data only. No secrets. Separate from the main app so Vercel is never triggered.
+
+## Integration (G8)
+
+1. Copy `runtime/locate.ts` into the app (or publish as tiny package).
+2. Host per-district chunks `d{district_id}.json` (or `.json.gz`) on CDN / static path.
+3. Load `coarse_gh6.json` once; call `locate(lat, lng, accuracyMeters, { loadDistrict, coarseGh6 })`.
+4. `dataset_version` field enables rollback: pin the chunk folder by version.
+5. Kivu / gaps return `flags: ["nearest_village", "near_water_or_gap"]` — still inside Rwanda.
+
+### API
+
+```ts
+locate(lat, lng, accuracyMeters, opts) -> {
+  finestLevel, topVillages[{village_id, share, name}],
+  villagePct, cellPct, sectorPct, districtPct, provincePct,
+  flags, datasetVersion, ms
+}
+```
+
+### Versioning
+- Current: `2026.10.30.3`
+- Fingerprints of NISR IDs in `data/fingerprints.json`
+
+### Rebuild
+```bash
+python scripts/download_nisr_geometry.py
+python scripts/build_grid.py --geojson data/rwanda_villages_full.geojson --out artifacts/grid
+```
 
 ## Status
 See [STATUS.md](STATUS.md).
 
-## G1 (done)
-- NISR source: Village_Boundary_2022 FeatureServer/3
-- Counts: 5 / 30 / 416 / 2148 / 14823
-- Geometry: 14823 villages, **0 null/invalid**
-- ID fingerprints: see `data/fingerprints.json`
-
-## Rebuild geometry
-```bash
-python scripts/download_nisr_geometry.py
-python scripts/compute_fingerprints.py data/rwanda_villages_full.geojson
-```
-
-## G2 (in progress)
-Adaptive geohash (primary) + H3 challenger.
-- Coarse: geohash 6 national
-- Village cells: geohash 7, adaptive geohash 8 on borders / tiny villages
-- Border cells: top 2-3 villages with area shares
-- Gaps (Kivu): nearest village + gap/near-water flag
-
-## License / data
-NISR administrative boundaries 2022. Public official data.
+## License
+NISR Village Boundary 2022 (public official data).

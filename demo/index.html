@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IWACU Grid — Menya aho ndi</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:0;padding:12px;background:#0f1419;color:#e7ecf1;max-width:480px;margin:auto}
+h1{font-size:1.2rem;margin:0 0 8px}
+button,input{font-size:1rem;padding:10px 12px;border-radius:8px;border:1px solid #333;background:#1a2332;color:#e7ecf1;width:100%;box-sizing:border-box;margin:4px 0}
+button{background:#1b7a4e;border:none;font-weight:600}
+.card{background:#1a2332;border-radius:12px;padding:12px;margin:10px 0}
+.muted{color:#8b9bb4;font-size:.85rem}
+.pct{font-size:1.4rem;font-weight:700;color:#3dd68c}
+label{display:block;margin-top:8px;font-size:.85rem;color:#8b9bb4}
+#out{white-space:pre-wrap;font-size:.9rem;line-height:1.4}
+</style>
+</head>
+<body>
+<h1>Menya aho ndi</h1>
+<p class="muted">IWACU grid demo. Chunks lazy-load. Enable GitHub Pages + host grid/ JSON.</p>
+<button id="btnGeo">Menya aho ndi (GPS)</button>
+<label>GPS error (m): <span id="accVal">50</span></label>
+<input type="range" id="acc" min="20" max="20000" value="50" step="10"/>
+<div class="card"><div id="out" class="muted">Tekereza GPS…</div></div>
+<label>Lat,Lng</label>
+<input id="manual" placeholder="-1.95, 30.06"/>
+<button id="btnMan">Shakisha</button>
+<button id="btnBench" style="background:#2a4a7a">Run benchmark</button>
+<script>
+const B32="0123456789bcdefghjkmnpqrstuvwxyz";
+function encode(lat,lon,prec){let idx=0,bit=0,even=true,latMin=-90,latMax=90,lonMin=-180,lonMax=180,gh="";
+while(gh.length<prec){if(even){const mid=(lonMin+lonMax)/2;if(lon>=mid){idx=idx*2+1;lonMin=mid}else{idx=idx*2;lonMax=mid}}
+else{const mid=(latMin+latMax)/2;if(lat>=mid){idx=idx*2+1;latMin=mid}else{idx=idx*2;latMax=mid}}
+even=!even;if(++bit===5){gh+=B32[idx];bit=0;idx=0}}return gh}
+const cache={};let coarse=null;
+async function loadDistrict(d){if(cache[d])return cache[d];try{const r=await fetch("../grid/d"+d+".json");if(!r.ok)throw 0;cache[d]=await r.json();return cache[d]}catch(e){return null}}
+async function ensureIndex(){if(!coarse){try{coarse=(await(await fetch("../grid/coarse_gh6.json")).json()).cells}catch(e){coarse={}}}}
+function nearby(lat,lon,prec,radiusM){const set=new Set([encode(lat,lon,prec)]);const dLat=radiusM/111320,dLon=radiusM/(111320*Math.cos(lat*Math.PI/180)||1);const steps=Math.max(1,Math.ceil(radiusM/(prec>=7?150:1200)));for(let i=-steps;i<=steps;i++)for(let j=-steps;j<=steps;j++)set.add(encode(lat+(i/steps)*dLat,lon+(j/steps)*dLon,prec));return[...set]}
+async function locate(lat,lng,acc){const t0=performance.now();await ensureIndex();const hashes=nearby(lat,lng,6,Math.max(acc,800));const dids=new Set();for(const h of hashes){const ds=coarse[h];if(ds)ds.forEach(d=>dids.add(d))}const chunks=[];for(const d of dids){const ch=await loadDistrict(d);if(ch)chunks.push(ch)}const cellIndex=new Map();for(const ch of chunks)for(const c of ch.cells)cellIndex.set(c.g,c);const votes={};let hit=0;for(const h of new Set([...nearby(lat,lng,7,acc),...nearby(lat,lng,8,Math.min(acc,80))])){const c=cellIndex.get(h);if(!c)continue;hit++;for(const t of c.t)votes[t.v]=(votes[t.v]||0)+t.s}if(hit===0){let best=null;for(const ch of chunks)for(const[vid,m]of Object.entries(ch.villages)){const dx=(m.lat-lat)*111320,dy=(m.lon-lng)*111320*Math.cos(lat*Math.PI/180);const dist=Math.sqrt(dx*dx+dy*dy);if(!best||dist<best.dist)best={vid,dist,m}}if(best)votes[best.vid]=1}const total=Object.values(votes).reduce((a,b)=>a+b,0)||1;const ranked=Object.entries(votes).map(([v,s])=>({v,s:s/total})).sort((a,b)=>b.s-a.s);const meta=vid=>{for(const ch of chunks)if(ch.villages[vid])return ch.villages[vid];return null};const top=ranked.slice(0,5).map(r=>{const m=meta(r.v);return{id:r.v,name:m?m.n:"?",pct:Math.round(r.s*1000)/10,cell:m&&m.c,sector:m&&m.s,dist:m&&m.d,prov:m&&m.p}});return{top,ms:Math.round(performance.now()-t0),chunks:chunks.length}}
+function show(res,lat,lng,acc){const el=document.getElementById("out");if(!res.top.length){el.textContent="Nta gisubizo (chunks zidafite online).";return}const t=res.top[0];el.innerHTML=`<div class="pct">${t.pct}%</div><strong>${t.name}</strong> <span class="muted">(${t.id})</span><br/>Akagari: ${t.cell||"?"} · Umurenge: ${t.sector||"?"}<br/>Akarere: ${t.dist||"?"} · Intara: ${t.prov||"?"}<br/><span class="muted">±${acc}m · ${res.ms}ms · chunks ${res.chunks}</span>`}
+document.getElementById("acc").oninput=e=>document.getElementById("accVal").textContent=e.target.value;
+document.getElementById("btnGeo").onclick=()=>{const acc=+document.getElementById("acc").value;if(!navigator.geolocation){alert("GPS ntiboneka");return}navigator.geolocation.getCurrentPosition(async pos=>{const lat=pos.coords.latitude,lng=pos.coords.longitude;show(await locate(lat,lng,acc),lat,lng,acc)},err=>{document.getElementById("out").textContent="GPS: "+err.message},{enableHighAccuracy:true,timeout:15000})};
+document.getElementById("btnMan").onclick=async()=>{const p=document.getElementById("manual").value.split(",").map(s=>parseFloat(s.trim()));if(p.length<2||isNaN(p[0])){alert("lat,lng");return}const acc=+document.getElementById("acc").value;show(await locate(p[0],p[1],acc),p[0],p[1],acc)};
+document.getElementById("btnBench").onclick=async()=>{const pts=[[-1.944,30.062],[-2.60,29.74],[-1.50,29.63]];const acc=50;const lines=["Benchmark "+new Date().toISOString()];const t0=performance.now();for(const[la,lo]of pts){const r=await locate(la,lo,acc);lines.push(la+","+lo+" -> "+((r.top[0]||{}).name||"?")+" "+((r.top[0]||{}).pct||0)+"% "+r.ms+"ms")}lines.push("Total ms "+Math.round(performance.now()-t0));document.getElementById("out").textContent=lines.join("\n")};
+</script>
+</body>
+</html>

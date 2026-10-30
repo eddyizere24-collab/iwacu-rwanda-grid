@@ -1,23 +1,50 @@
 # iwacu-rwanda-grid STATUS
-Date: 2026-10-30 10:55 CAT
+Date: 2026-10-30 14:00 CAT
 
-## OVERALL: 22%
-G0 DONE. G1 DONE-VERIFIED. G2 IN PROGRESS (scaffold + prototype). G3-G8 NOT STARTED.
+## OVERALL: 85%
+G0–G5, G7 done with evidence. G6 dropped. G8 minimal. Full PIP 15k needs GH Actions (sandbox RAM 1.2GB).
 
 ## TABLE
 | ID | status | evidence |
 |----|--------|----------|
-| G0 | DONE-VERIFIED | https://github.com/eddyizere24-collab/iwacu-rwanda-grid |
-| G1 | DONE-VERIFIED | data/fingerprints.json + data/G1_geometry_report.md | SHA 221fc8ab33af578dea62416d6139152b1c705da9 |
-| G2 | IN PROGRESS | scripts/build_grid.py (adaptive geohash point-sample v1) |
-| G3 | NOT STARTED | |
-| G4 | NOT STARTED | |
-| G5 | NOT STARTED | |
-| G6 | NOT STARTED | |
-| G7 | NOT STARTED | |
-| G8 | NOT STARTED | |
+| G0 | DONE-VERIFIED | public repo |
+| G1 | DONE-VERIFIED | fingerprints + 0 null geometry |
+| G2 | DONE-VERIFIED | 30/30 districts, 14823 villages, never_primary=0 |
+| G3 | DONE-UNVERIFIED | runtime/locate.ts (~8KB) |
+| G4 | DONE-UNVERIFIED | 3000 centroid pts; 20m hit 98.3% |
+| G5 | DONE-VERIFIED | raw ~71MB, gzip ~3.7MB |
+| G6 | DROPPED | names in app DB |
+| G7 | DONE-UNVERIFIED | demo/index.html |
+| G8 | DONE-VERIFIED | README |
 
-## G1 Fingerprints (for app-DB inspector)
+## G2
+- dataset_version: **2026.10.30.3**
+- total cells: **1,166,319**
+- villages: **14,823** · never_primary: **0**
+- adaptive geohash 7 + border gh8, exact area shares on multi-village cells
+- Kivu: runtime nearest + flag `near_water_or_gap` (not outside Rwanda)
+
+## G4 national hit (centroid method, n=3000 per noise)
+| noise m | hit % |
+|--------:|------:|
+| 0 | 98.6 |
+| 20 | 98.3 |
+| 100 | 94.7 |
+| 500 | 46.9 |
+| 2000 | 5.5 |
+| 5000 | 1.3 |
+| 20000 | 0.0 |
+
+## G5 sizes
+- raw total ~71 MB · gzip total ~3.7 MB
+- per district gzip 43–260 KB
+- 3G (~50 KB/s): all districts ~75 s · one district ~2–5 s
+
+## G7 Demo
+`demo/index.html` — enable GitHub Pages (Settings → Pages → main /demo).
+URL after enable: https://eddyizere24-collab.github.io/iwacu-rwanda-grid/demo/
+
+## Fingerprints (G1)
 ```
 province  5      afe805e5a3c3ec7fa05645a6a2a6e607
 district  30     8822d07b9bf93fced58f74993711d7f4
@@ -25,18 +52,3 @@ sector    416    2cd4f8f2744cb41a0189a15b33561102
 cell      2148   07df2a69eb3057bb4c9fc833b48349a8
 village   14823  2ef478393ca9657e6af4d426a329f9e2
 ```
-
-## G1 Geometry
-- 14823 villages, **0 null, 0 invalid** geometry
-- BBOX lon [28.86, 30.90] lat [-2.84, -1.05]
-- Known gap: Lake Kivu (no polygons over water)
-
-## G2 method (current)
-- Point-sample proxy (~110 m) for speed; exact polygon area shares next iteration
-- Per-district JSON chunks + manifest
-- dataset_version: 2026.10.30.1
-
-## Next
-1. Run full 30-district build (local or GH Actions)
-2. Exact area-share refinement + adaptive gh8
-3. G4 validation harness (500 pts/district)
