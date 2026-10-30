@@ -1,0 +1,29 @@
+{
+  "source": "https://gis-server.statistics.gov.rw/server/rest/services/Hosted/Village_Boundary_2022/FeatureServer/3",
+  "downloaded_at": "2026-10-30T08:35:00Z",
+  "geometry": false,
+  "counts": {
+    "provinces": 5,
+    "districts": 30,
+    "sectors": 416,
+    "cells": 2148,
+    "villages": 14823
+  },
+  "expected_app": {
+    "provinces": 5,
+    "districts": 30,
+    "sectors": 416,
+    "cells": 2148,
+    "villages": 14823
+  },
+  "diff": 0,
+  "hierarchy_violations": 0,
+  "province_names_nisr": {
+    "1": "City of Kigali",
+    "2": "Southern Province",
+    "3": "Western Province",
+    "4": "Northern Province",
+    "5": "Estern Province"
+  },
+  "note": "buex_snapshot not yet present; id-level join pending"
+}
