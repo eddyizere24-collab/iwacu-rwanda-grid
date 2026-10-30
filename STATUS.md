@@ -1,54 +1,45 @@
-# iwacu-rwanda-grid STATUS
-Date: 2026-10-30 14:00 CAT
+# STATUS — Algorithm lock (30 Ukwakira 2026 14:15 CAT)
 
-## OVERALL: 85%
-G0–G5, G7 done with evidence. G6 dropped. G8 minimal. Full PIP 15k needs GH Actions (sandbox RAM 1.2GB).
+## OVERALL: 40%
+Algorithm locked. GH4 chunks + pyramid built. Full A1–A7 SEED-TEST not yet run in Actions.
 
 ## TABLE
-| ID | status | evidence |
-|----|--------|----------|
-| G0 | DONE-VERIFIED | public repo |
-| G1 | DONE-VERIFIED | fingerprints + 0 null geometry |
-| G2 | DONE-VERIFIED | 30/30 districts, 14823 villages, never_primary=0 |
-| G3 | DONE-UNVERIFIED | runtime/locate.ts (~8KB) |
-| G4 | DONE-UNVERIFIED | 3000 centroid pts; 20m hit 98.3% |
-| G5 | DONE-VERIFIED | raw ~71MB, gzip ~3.7MB |
-| G6 | DROPPED | names in app DB |
-| G7 | DONE-UNVERIFIED | demo/index.html |
-| G8 | DONE-VERIFIED | README |
+| Item | status | evidence |
+|------|--------|----------|
+| Algorithm | DONE-UNVERIFIED | runtime/locate_v2.ts |
+| GH4 chunks | DONE-VERIFIED | 50 prefixes, ~3.3 MB gz |
+| Summary pyramid | DONE-VERIFIED | **39.3 KB gz** (≤300 KB target) |
+| never_primary | IN PROGRESS | force applied; CI recount |
+| CI workflow | DONE-UNVERIFIED | .github/workflows/grid.yml |
+| A1–A7 | NOT STARTED | needs Actions matrix |
+| Demo v2 | IN PROGRESS | |
 
-## G2
-- dataset_version: **2026.10.30.3**
-- total cells: **1,166,319**
-- villages: **14,823** · never_primary: **0**
-- adaptive geohash 7 + border gh8, exact area shares on multi-village cells
-- Kivu: runtime nearest + flag `near_water_or_gap` (not outside Rwanda)
+## Algorithm (locked — no deviation without measurement)
+- Input accuracy a (m, Android 68% radius)
+- σ = a / 1.51; a ≤ 10 m → point lookup
+- precision p: 7 if σ≤450 m; 6 if σ≤1.8 km; else 5
+- Cells whose centres within 3σ; weight w = exp(−d²/(2σ²))
+- P(village) = Σ w·share / Σ w; hierarchy = sum over member villages
+- Chosen level: finest with top-1 ≥ τ=0.80; else coarser
+- Always top 3 villages + full path; never empty
+- Chunks keyed by **geohash-4** (≤4 files / lookup)
+- Outside country bbox → flag `outside_rwanda` (Kivu-inside = INSIDE)
 
-## G4 national hit (centroid method, n=3000 per noise)
-| noise m | hit % |
-|--------:|------:|
-| 0 | 98.6 |
-| 20 | 98.3 |
-| 100 | 94.7 |
-| 500 | 46.9 |
-| 2000 | 5.5 |
-| 5000 | 1.3 |
-| 20000 | 0.0 |
+## Why old 46.9% @ 500 m vs PostGIS ~93%
+Old grid used single primary cell + scored vs **origin** village after noise (not PIP at noisy point). At 500 m the true village often changes. PostGIS border suite kept points inside polygons. New Gaussian weights + PIP truth + level backoff fix this class of error.
 
-## G5 sizes
-- raw total ~71 MB · gzip total ~3.7 MB
-- per district gzip 43–260 KB
-- 3G (~50 KB/s): all districts ~75 s · one district ~2–5 s
+## Seeds
+- SEED-TUNE = 424242
+- SEED-TEST = 20261030
 
-## G7 Demo
-`demo/index.html` — enable GitHub Pages (Settings → Pages → main /demo).
-URL after enable: https://eddyizere24-collab.github.io/iwacu-rwanda-grid/demo/
+## Sizes
+- Pyramid: 39.3 KB gz
+- GH4 total: ~3.3 MB gz (50 files, mean ~65 KB)
 
-## Fingerprints (G1)
-```
-province  5      afe805e5a3c3ec7fa05645a6a2a6e607
-district  30     8822d07b9bf93fced58f74993711d7f4
-sector    416    2cd4f8f2744cb41a0189a15b33561102
-cell      2148   07df2a69eb3057bb4c9fc833b48349a8
-village   14823  2ef478393ca9657e6af4d426a329f9e2
-```
+## Acceptance A1–A7
+All **UNVERIFIED** until Actions validate job completes on SEED-TEST with PIP ground truth.
+
+## Next
+1. Complete build_algo_grid.py + validate_district.py (PIP)
+2. Run workflow; collect run URL
+3. Fix failing district×noise slices; redeploy demo

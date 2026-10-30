@@ -1,0 +1,19 @@
+{
+  "dataset_version": "2026.10.30.algo2",
+  "algorithm": "gaussian-weighted-geohash",
+  "sigma_factor": "a/1.51",
+  "tau": 0.80,
+  "summary_pyramid_gz_kb": 39.3,
+  "gh4_prefixes": 50,
+  "gh4_total_gz_kb": 3267,
+  "seeds": {"tune": 424242, "test": 20261030},
+  "acceptance": {
+    "A1": "UNVERIFIED",
+    "A2": "UNVERIFIED",
+    "A3": "UNVERIFIED",
+    "A4": "UNVERIFIED",
+    "A5": "UNVERIFIED",
+    "A6": "UNVERIFIED",
+    "A7": "UNVERIFIED"
+  }
+}
