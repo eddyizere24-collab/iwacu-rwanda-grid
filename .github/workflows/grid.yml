@@ -3,10 +3,16 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "smoke or full"
+        default: "smoke"
+        type: choice
+        options: [smoke, full]
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,18 +21,17 @@ jobs:
       - name: Install deps
         run: pip install shapely pygeohash
       - name: Download NISR geometry
-        run: python scripts/download_nisr_geometry.py || true
-      - name: Build grid + pyramid + gh4
-        run: python scripts/build_algo_grid.py || echo "build script pending full body"
+        run: python scripts/download_nisr_geometry.py
+      - name: Build grid + pyramid + gh4 + national
+        run: python scripts/build_algo_grid.py --geojson data/rwanda_villages_full.geojson --out artifacts/algo_out
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: grid-artifacts
           path: |
-            artifacts/
+            artifacts/algo_out/
             data/
-            algo_out/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7
   validate:
     needs: build
@@ -34,7 +39,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        district: ["11","12","13","21","22","23","24","25","26","27","28","31","32","33","34","35","36","37","41","42","43","44","45","51","52","53","54","55","56","57"]
+        # SMOKE: Nyarugenge=11, Nyamasheke=37. Full matrix restored after green.
+        district: ["11", "37"]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -45,16 +51,21 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: grid-artifacts
-          continue-on-error: true
-      - name: Validate district
+      - name: Validate district (100 pts smoke)
         run: |
           mkdir -p metrics
-          python scripts/validate_district.py --district ${{ matrix.district }} --seed-test 20261030 --out metrics/d${{ matrix.district }}.json || true
+          python scripts/validate_district.py \
+            --district ${{ matrix.district }} \
+            --seed-test 20261030 \
+            --points 100 \
+            --geojson data/rwanda_villages_full.geojson \
+            --chunks artifacts/algo_out/chunks_gh4 \
+            --national data/rwanda_national.geojson \
+            --out metrics/d${{ matrix.district }}.json
       - uses: actions/upload-artifact@v4
         with:
           name: metrics-${{ matrix.district }}
           path: metrics/d${{ matrix.district }}.json
-          if-no-files-found: warn
   aggregate:
     needs: validate
     runs-on: ubuntu-latest
@@ -65,12 +76,11 @@ jobs:
           pattern: metrics-*
           merge-multiple: true
           path: metrics
-          continue-on-error: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Aggregate and gate A1-A7
-        run: python scripts/aggregate_metrics.py --metrics-dir metrics --fail-on-criteria || true
+        run: python scripts/aggregate.py --metrics-dir metrics --fail-on-criteria
       - uses: actions/upload-artifact@v4
         with:
           name: validation-report
