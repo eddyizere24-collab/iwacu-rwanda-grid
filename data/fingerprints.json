@@ -1,0 +1,27 @@
+{
+  "method": "md5 of sorted ID strings joined by comma, no spaces, trimmed, zero-padded as NISR",
+  "source": "NISR Village_Boundary_2022 FeatureServer/3 full geometry download 2026-10-30",
+  "levels": {
+    "province": {"count": 5, "md5": "afe805e5a3c3ec7fa05645a6a2a6e607"},
+    "district": {"count": 30, "md5": "8822d07b9bf93fced58f74993711d7f4"},
+    "sector": {"count": 416, "md5": "2cd4f8f2744cb41a0189a15b33561102"},
+    "cell": {"count": 2148, "md5": "07df2a69eb3057bb4c9fc833b48349a8"},
+    "village": {"count": 14823, "md5": "2ef478393ca9657e6af4d426a329f9e2"}
+  },
+  "geometry": {
+    "null_or_empty": 0,
+    "invalid_type_or_short_rings": 0,
+    "bbox": {"lon_min": 28.86173, "lon_max": 30.89975, "lat_min": -2.84023, "lat_max": -1.04717},
+    "note": "Lake Kivu area has no village polygons (known NISR coverage gap); water cells will be nearest-village + gap flag in G2"
+  },
+  "names": {
+    "province_display_kiny": {
+      "1": "Umujyi wa Kigali",
+      "2": "Amajyepfo",
+      "3": "Iburengerazuba",
+      "4": "Amajyaruguru",
+      "5": "Iburasirazuba"
+    },
+    "nisr_typo_fixed": "Estern Province -> Iburasirazuba / Eastern"
+  }
+}
