@@ -1,0 +1,156 @@
+{
+  "positions": [
+    {
+      "i": 0,
+      "lat": -2.563713,
+      "lng": 28.894024,
+      "dev_m": 57.2
+    },
+    {
+      "i": 1,
+      "lat": -2.644726,
+      "lng": 29.058603,
+      "dev_m": 5.4
+    },
+    {
+      "i": 2,
+      "lat": -2.59324,
+      "lng": 29.094005,
+      "dev_m": 17.7
+    },
+    {
+      "i": 3,
+      "lat": -2.595633,
+      "lng": 29.152665,
+      "dev_m": 10.0
+    },
+    {
+      "i": 4,
+      "lat": -2.621257,
+      "lng": 29.211687,
+      "dev_m": 111.0
+    },
+    {
+      "i": 5,
+      "lat": -2.619872,
+      "lng": 29.267469,
+      "dev_m": 55.1
+    },
+    {
+      "i": 6,
+      "lat": -1.50708,
+      "lng": 29.420362,
+      "dev_m": 1.0
+    },
+    {
+      "i": 7,
+      "lat": -1.544844,
+      "lng": 29.34078,
+      "dev_m": 4.3
+    },
+    {
+      "i": 8,
+      "lat": -1.622052,
+      "lng": 29.280726,
+      "dev_m": 0.0
+    },
+    {
+      "i": 9,
+      "lat": -1.706261,
+      "lng": 29.238766,
+      "dev_m": 1110.3
+    },
+    {
+      "i": 10,
+      "lat": -1.789446,
+      "lng": 29.178301,
+      "dev_m": 10080.6
+    },
+    {
+      "i": 11,
+      "lat": -1.879551,
+      "lng": 29.1313,
+      "dev_m": 4973.6
+    },
+    {
+      "i": 12,
+      "lat": -1.979469,
+      "lng": 29.142588,
+      "dev_m": 4300.2
+    },
+    {
+      "i": 13,
+      "lat": -2.078076,
+      "lng": 29.171156,
+      "dev_m": 9422.8
+    },
+    {
+      "i": 14,
+      "lat": -2.176545,
+      "lng": 29.153961,
+      "dev_m": 4077.0
+    },
+    {
+      "i": 15,
+      "lat": -2.267707,
+      "lng": 29.106981,
+      "dev_m": 3275.3
+    },
+    {
+      "i": 16,
+      "lat": -2.291152,
+      "lng": 29.008107,
+      "dev_m": 1370.2
+    },
+    {
+      "i": 17,
+      "lat": -2.370697,
+      "lng": 28.964491,
+      "dev_m": 2270.3
+    },
+    {
+      "i": 18,
+      "lat": -2.402782,
+      "lng": 28.876721,
+      "dev_m": 1785.9
+    },
+    {
+      "i": 19,
+      "lat": -2.4941,
+      "lng": 28.891927,
+      "dev_m": 24.0
+    }
+  ],
+  "max_dev_m": 10080.6,
+  "mean_dev_m": 2147.6,
+  "trusted_source": "OSM Nominatim",
+  "note": "OSM is reference for Kivu; geoBoundaries follows shoreline differently (max ~10km)",
+  "margin_m": 300.0,
+  "inside_pts": 25,
+  "outside_pts": 25,
+  "ambiguous_skipped": 0,
+  "outside_ring_from_national": {
+    "100": {
+      "samples_attempted": 200,
+      "verified_outside": 200,
+      "flagged_inside": 0
+    },
+    "500": {
+      "samples_attempted": 200,
+      "verified_outside": 200,
+      "flagged_inside": 0
+    },
+    "1000": {
+      "samples_attempted": 200,
+      "verified_outside": 200,
+      "flagged_inside": 0
+    },
+    "2000": {
+      "samples_attempted": 200,
+      "verified_outside": 200,
+      "flagged_inside": 0
+    }
+  },
+  "kivu_water_outside_national_samples": 0,
+  "kivu_water_flagged_inside_national": 0
+}

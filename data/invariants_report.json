@@ -1,0 +1,25 @@
+{
+  "a_missing_cells": 197,
+  "a_interior_tested": 49314,
+  "b_pure_ok": 15945,
+  "b_pure_mismatch": 45,
+  "b_pure_mismatch_pct": 0.2814,
+  "c_pure_r0_by_quartile": {
+    "Q1": 99.294,
+    "Q2": 99.033,
+    "Q3": 99.533,
+    "Q4": 99.728
+  },
+  "d_interior_r0_by_quartile": {
+    "Q1": 98.19,
+    "Q2": 98.584,
+    "Q3": 99.177,
+    "Q4": 98.49
+  },
+  "d_interior_r0_overall": 98.614,
+  "pass_a": false,
+  "pass_b": false,
+  "pass_c": false,
+  "pass_d": false,
+  "all_pass": false
+}

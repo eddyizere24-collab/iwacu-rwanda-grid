@@ -1,0 +1,18 @@
+{
+  "kivu_sha256": "16e1a78572950dd7a192187e6e51c73b00e009fe6c90a3737a9ba4d5c7d74b48",
+  "kivu_bytes": 78427,
+  "kivu_kb": 76.59,
+  "kivu_vertices_before": 16400,
+  "kivu_vertices_after": 1931,
+  "kivu_area_km2_before": 1009.9,
+  "kivu_area_km2_after": 1010.72,
+  "kivu_centroid": {
+    "lat": -2.03832,
+    "lng": 29.19278
+  },
+  "national_sha256": "ab4b122f06cca22fbb442f4a07f80bad6bf3d369b51643804034d86811a7586c",
+  "national_bytes": 40431,
+  "national_kb": 39.48,
+  "national_area_km2": 25325.0,
+  "simplify_m": 100
+}
