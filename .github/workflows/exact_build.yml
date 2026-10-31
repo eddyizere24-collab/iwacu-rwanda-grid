@@ -1,0 +1,106 @@
+name: exact-build-invariants
+on:
+  workflow_dispatch:
+jobs:
+  build-district:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # start with smoke 4 districts; expand after invariants pass
+        district: ["11", "12", "13", "37"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely pygeohash pyproj
+      - name: Ensure geojson
+        run: |
+          if [ ! -f data/rwanda_villages_full.geojson ]; then
+            python scripts/download_nisr_geometry.py
+          fi
+      - run: python scripts/build_exact_grid.py --district ${{ matrix.district }} --out artifacts/exact_out_${{ matrix.district }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exact-${{ matrix.district }}
+          path: artifacts/exact_out_${{ matrix.district }}/
+  merge-invariants:
+    needs: build-district
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely pygeohash pyproj
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: exact-*
+          path: downloaded
+      - name: Merge chunks
+        run: |
+          mkdir -p artifacts/exact_out/chunks_gh4 data
+          if [ ! -f data/rwanda_villages_full.geojson ]; then
+            python scripts/download_nisr_geometry.py
+          fi
+          python - <<'PY'
+          import json, gzip, collections
+          from pathlib import Path
+          by_p = collections.defaultdict(list)
+          villages = {}
+          for d in Path("downloaded").rglob("chunks_gh4"):
+              for p in d.glob("*.json.gz"):
+                  with gzip.open(p, "rt") as f:
+                      ch = json.load(f)
+                  by_p[ch["prefix"]].extend(ch["cells"])
+                  villages.update(ch.get("villages", {}))
+          for prefix, cells in by_p.items():
+              # dedupe by g keeping highest prec
+              best = {}
+              for c in cells:
+                  g = c["g"]
+                  if g not in best or c.get("prec", 7) > best[g].get("prec", 7):
+                      best[g] = c
+              payload = {"v": "2026.10.31.exact1", "prefix": prefix, "cells": list(best.values()),
+                         "villages": {vid: villages[vid] for c in best.values() for t in c["t"] for vid in [t["v"]] if vid in villages}}
+              raw = json.dumps(payload, separators=(",", ":")).encode()
+              out = Path(f"artifacts/exact_out/chunks_gh4/{prefix}.json.gz")
+              with gzip.open(out, "wb", compresslevel=9) as f:
+                  f.write(raw)
+              print(prefix, len(best), out.stat().st_size)
+          PY
+      - run: python scripts/check_invariants.py --districts 11,12,13,37 --chunks artifacts/exact_out/chunks_gh4 --out data/invariants_report.json
+      - run: python scripts/size_benchmark.py --chunks artifacts/exact_out/chunks_gh4 --out data/size_benchmark.json || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exact-merged-invariants
+          path: |
+            artifacts/exact_out/
+            data/invariants_report.json
+            data/size_benchmark.json
+            data/manifest_exact.json
+  national-osm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely
+      - name: Ensure geojson
+        run: |
+          if [ ! -f data/rwanda_villages_full.geojson ]; then
+            python scripts/download_nisr_geometry.py
+          fi
+      - run: python scripts/build_national_osm.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: national-osm
+          path: |
+            data/rwanda_national.geojson
+            data/rwanda_national_meta.json
+            data/osm_rwanda_boundary.geojson
