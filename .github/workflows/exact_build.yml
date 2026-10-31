@@ -28,7 +28,7 @@ jobs:
   merge-invariants:
     needs: build-district
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -36,37 +36,25 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install shapely pygeohash pyproj
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: exact-*
-          path: downloaded
-      - name: Merge binary roots + gh6
+      - name: Ensure geojson
         run: |
-          mkdir -p artifacts/exact_out/gh6 data
           if [ ! -f data/rwanda_villages_full.geojson ]; then
             python scripts/download_nisr_geometry.py
           fi
+      - name: Rebuild coherent 4-district index
+        run: |
+          # Filter geojson to 4 districts then build once (avoids broken max-root merge)
           python - <<'PY'
-          import shutil, json
+          import json
           from pathlib import Path
-          # Prefer largest root (most cells); union gh6 files
-          roots = list(Path("downloaded").rglob("root.bin.gz"))
-          if roots:
-              best = max(roots, key=lambda p: p.stat().st_size)
-              shutil.copy(best, "artifacts/exact_out/root.bin.gz")
-              print("root", best, best.stat().st_size)
-          for src in Path("downloaded").rglob("gh6"):
-              if src.is_dir():
-                  for f in src.glob("*.bin.gz"):
-                      dest = Path("artifacts/exact_out/gh6") / f.name
-                      if not dest.exists() or f.stat().st_size > dest.stat().st_size:
-                          shutil.copy(f, dest)
-          n = len(list(Path("artifacts/exact_out/gh6").glob("*.bin.gz")))
-          print("gh6 files", n)
-          for d in Path("downloaded").rglob("manifest.json"):
-              shutil.copy(d, "artifacts/exact_out/manifest.json")
-              break
+          with open("data/rwanda_villages_full.geojson") as f:
+              fc = json.load(f)
+          keep = {"11", "12", "13", "37"}
+          fc["features"] = [ft for ft in fc["features"] if str(ft["properties"]["district_id"]) in keep]
+          Path("data/rwanda_4d.geojson").write_text(json.dumps(fc))
+          print("features", len(fc["features"]))
           PY
+          python scripts/build_exact_grid.py --geojson data/rwanda_4d.geojson --out artifacts/exact_out
       - name: Invariants (binary longest-prefix)
         run: |
           export PYTHONPATH=scripts
