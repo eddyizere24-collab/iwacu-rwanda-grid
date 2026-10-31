@@ -1,0 +1,61 @@
+name: aux-national-kivu-size
+on:
+  workflow_dispatch:
+jobs:
+  national-polygon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely
+      - name: Ensure NISR geojson
+        run: |
+          if [ ! -f data/rwanda_villages_full.geojson ]; then
+            python scripts/download_nisr_geometry.py
+          fi
+      - run: python scripts/build_national_polygon.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: national-polygon
+          path: |
+            data/rwanda_national.geojson
+            data/rwanda_national_meta.json
+  kivu-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely
+      - run: python scripts/kivu_check.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kivu-check
+          path: |
+            data/kivu_test_points.csv
+            data/kivu_check_report.json
+  size-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pygeohash
+      - name: Note grid artifacts required from grid.yml
+        run: |
+          echo "Run size_benchmark after grid.yml produces chunks; continue-on-error if missing"
+          ls -la artifacts/algo_out/chunks_gh4 2>/dev/null || true
+      - run: python scripts/size_benchmark.py
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: size-benchmark
+          path: data/size_benchmark.json
+          if-no-files-found: warn
