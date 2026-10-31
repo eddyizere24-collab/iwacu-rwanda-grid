@@ -1,24 +1,196 @@
 {
-  "a_missing_cells": 0,
+  "decoder": "shipped_binary_longest_prefix",
+  "a_missing_cells": 46594,
   "a_interior_tested": 49314,
-  "b_pure_ok": 15941,
-  "b_pure_mismatch": 16,
-  "b_pure_mismatch_pct": 0.1003,
+  "a_examples": [
+    {
+      "lat": -1.948765,
+      "lng": 30.052094,
+      "gh9": "kxtkgv5r8",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.94848,
+      "lng": 30.052293,
+      "gh9": "kxtkgv73m",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.949009,
+      "lng": 30.053945,
+      "gh9": "kxtkgvhw5",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.948473,
+      "lng": 30.052556,
+      "gh9": "kxtkgv797",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.948519,
+      "lng": 30.052667,
+      "gh9": "kxtkgv79j",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.948936,
+      "lng": 30.053417,
+      "gh9": "kxtkgvhnx",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.948698,
+      "lng": 30.053,
+      "gh9": "kxtkgv7bj",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.948944,
+      "lng": 30.053777,
+      "gh9": "kxtkgvhqx",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.948166,
+      "lng": 30.052101,
+      "gh9": "kxtkgv770",
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.949103,
+      "lng": 30.053233,
+      "gh9": "kxtkgvhje",
+      "expected": "11010101",
+      "got": null
+    }
+  ],
+  "b_pure_ok": 0,
+  "b_pure_mismatch": 0,
+  "b_pure_mismatch_pct": 0.0,
+  "b_examples": [],
   "c_pure_r0_by_quartile": {
-    "Q1": 99.115,
-    "Q2": 99.142,
-    "Q3": 99.723,
+    "Q1": 60.0,
+    "Q2": 100.0,
+    "Q3": 100.0,
     "Q4": 100.0
   },
+  "c_examples": [
+    {
+      "lat": -1.961006,
+      "lng": 30.124911,
+      "key": "kxtkve0",
+      "expected": "12130404",
+      "got": "13100305"
+    },
+    {
+      "lat": -1.960687,
+      "lng": 30.124921,
+      "key": "kxtkve0",
+      "expected": "12130404",
+      "got": "13100305"
+    }
+  ],
   "d_interior_r0_by_quartile": {
-    "Q1": 97.87,
-    "Q2": 98.698,
-    "Q3": 99.365,
-    "Q4": 99.911
+    "Q1": 2.439,
+    "Q2": 2.383,
+    "Q3": 5.489,
+    "Q4": 9.798
   },
-  "d_interior_r0_overall": 98.972,
-  "pass_a": true,
-  "pass_b": false,
+  "d_interior_r0_overall": 5.012,
+  "d_examples": [
+    {
+      "lat": -1.948837,
+      "lng": 30.053384,
+      "gh9": "kxtkgvhpn",
+      "key": null,
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.948811,
+      "lng": 30.052544,
+      "gh9": "kxtkgv5x7",
+      "key": null,
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.948335,
+      "lng": 30.052811,
+      "gh9": "kxtkgv7f1",
+      "key": null,
+      "expected": "11010101",
+      "got": null
+    },
+    {
+      "lat": -1.945569,
+      "lng": 30.051812,
+      "gh9": "kxtkgvg41",
+      "key": null,
+      "expected": "11010102",
+      "got": null
+    },
+    {
+      "lat": -1.945733,
+      "lng": 30.052619,
+      "gh9": "kxtkgvg9k",
+      "key": null,
+      "expected": "11010102",
+      "got": null
+    },
+    {
+      "lat": -1.946476,
+      "lng": 30.05375,
+      "gh9": "kxtkgvskz",
+      "key": null,
+      "expected": "11010102",
+      "got": null
+    },
+    {
+      "lat": -1.944782,
+      "lng": 30.052816,
+      "gh9": "kxtkgvgyc",
+      "key": null,
+      "expected": "11010102",
+      "got": null
+    },
+    {
+      "lat": -1.944888,
+      "lng": 30.051501,
+      "gh9": "kxtkgvfy4",
+      "key": null,
+      "expected": "11010103",
+      "got": null
+    },
+    {
+      "lat": -1.944452,
+      "lng": 30.050536,
+      "gh9": "kxtkgy40s",
+      "key": null,
+      "expected": "11010103",
+      "got": null
+    },
+    {
+      "lat": -1.944293,
+      "lng": 30.051187,
+      "gh9": "kxtkgy49e",
+      "key": null,
+      "expected": "11010103",
+      "got": null
+    }
+  ],
+  "pass_a": false,
+  "pass_b": true,
   "pass_c": false,
   "pass_d": false,
   "all_pass": false
