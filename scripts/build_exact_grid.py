@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Exact lattice grid with hierarchical pure-merge + binary on-disk format.
+"""Exact lattice + hierarchical pure-merge (strict: all 32 children exist, pure, same village).
 
-PURE = exclusive single village. MIXED refined to gh8/gh9.
-If all children of a cell are pure and the SAME village, store the parent only
-(recursively up to gh4). Binary: sorted geohash keys delta-coded + varint shares.
-Chunks: root index (<=~40KB gz) + refined leaves by gh6 prefix.
+Absent children (water/outside) block merge — parent stays unmerged at child level.
+Never drop mixed leaves. Binary root (<=gh5 pure) + gh6 refined files.
 """
 from __future__ import annotations
 import argparse, json, gzip, hashlib, collections, math, struct
@@ -17,7 +15,7 @@ from shapely.prepared import prep
 import pygeohash as pgh
 from pyproj import Transformer
 
-VERSION = "2026.10.31.hier1"
+VERSION = "2026.10.31.hier2"
 TO_UTM = Transformer.from_crs("EPSG:4326", "EPSG:32736", always_xy=True)
 BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
 
@@ -66,9 +64,6 @@ def cells_covering_polygon(poly, precision):
                 seen[gh] = bb
     return seen
 
-def children32(gh):
-    return [gh + c for c in BASE32]
-
 def refine_mixed(gh, village_geoms, village_ids, precision_next):
     parent_bb = box(*gh_bbox(gh))
     dlat, dlon = lattice_step(precision_next)
@@ -101,6 +96,34 @@ def refine_mixed(gh, village_geoms, village_ids, precision_next):
             result[child] = {"shares": shares, "pure": len(areas) == 1, "prec": precision_next}
     return result
 
+def hierarchical_merge(store: dict):
+    """Merge only if ALL 32 BASE32 children exist in store, each pure, same village.
+    Absent children (water/outside) block merge. Never delete mixed leaves.
+    """
+    for prec in (9, 8, 7, 6, 5):
+        parents = collections.defaultdict(list)
+        for gh in list(store.keys()):
+            if len(gh) != prec:
+                continue
+            parents[gh[:-1]].append(gh)
+        for parent, kids in parents.items():
+            if len(parent) < 4:
+                continue
+            # strict: need every BASE32 suffix present
+            expected = {parent + c for c in BASE32}
+            if set(kids) != expected:
+                continue
+            if any(not store[k]["pure"] for k in kids):
+                continue
+            vids = {store[k]["shares"][0][0] for k in kids}
+            if len(vids) != 1:
+                continue
+            vid = next(iter(vids))
+            store[parent] = {"pure": True, "shares": [(vid, 1.0)], "prec": len(parent)}
+            for k in kids:
+                del store[k]
+    return store
+
 def build_district(feats):
     vgeoms, vmeta = [], []
     for feat in feats:
@@ -129,8 +152,7 @@ def build_district(feats):
             if a > 1e-6:
                 cell_areas[gh][ids[i]] += a
 
-    # leaf cells at gh7+ refinement
-    leaves = {}  # gh -> {pure, shares:[(vid,s)], prec}
+    leaves = {}
     mixed7 = []
     for gh, ctr in cell_areas.items():
         total = sum(ctr.values())
@@ -157,43 +179,9 @@ def build_district(feats):
                         "prec": 9,
                     }
 
-    # hierarchical merge: pure same-village children -> parent (gh9..gh4)
-    store = dict(leaves)
-    for prec in (9, 8, 7, 6, 5):
-        parents = collections.defaultdict(list)
-        for gh, info in list(store.items()):
-            if len(gh) != prec:
-                continue
-            parents[gh[:-1]].append(gh)
-        for parent, kids in parents.items():
-            if len(parent) < 4:
-                continue
-            # need all 32 children present and pure same village OR only pure subset covering
-            # Spec: if all 32 children pure and same village -> parent pure
-            if len(kids) < 32:
-                # partial: still merge if every existing child is pure same vid and no mixed siblings known
-                vids = set()
-            ok = True
-            vids = set()
-            for k in kids:
-                info = store[k]
-                if not info["pure"]:
-                    ok = False
-                    break
-                vids.add(info["shares"][0][0])
-            if not ok or len(vids) != 1:
-                continue
-            if len(kids) < 32:
-                # only collapse full 32-child pure blocks (strict)
-                continue
-            vid = next(iter(vids))
-            store[parent] = {"pure": True, "shares": [(vid, 1.0)], "prec": len(parent)}
-            for k in kids:
-                del store[k]
-
+    store = hierarchical_merge(leaves)
     return store, {m["id"]: m for m in vmeta}
 
-# ---- binary codec ----
 def _uvarint(n: int) -> bytes:
     out = bytearray()
     while n > 0x7F:
@@ -209,7 +197,6 @@ def _gh_to_int(gh: str) -> int:
     return n
 
 def write_binary_chunk(cells: dict, village_index: dict[str, int]) -> bytes:
-    """Sorted geohash keys delta-coded; pure: flag+vid; mixed: n + (vid,share_q16)."""
     items = sorted(cells.items(), key=lambda x: x[0])
     buf = bytearray()
     buf += b"IRG1"
@@ -219,7 +206,7 @@ def write_binary_chunk(cells: dict, village_index: dict[str, int]) -> bytes:
         cur = _gh_to_int(gh)
         buf += _uvarint(cur - prev)
         prev = cur
-        buf += bytes([len(gh)])  # precision / key length
+        buf += bytes([len(gh)])
         if info["pure"]:
             buf += b"\x01"
             buf += _uvarint(village_index[info["shares"][0][0]])
@@ -259,78 +246,55 @@ def main():
         pure_n = sum(1 for c in cells.values() if c["pure"])
         print(f"  cells={len(cells)} pure={pure_n}", flush=True)
 
-    # village id catalog
     vids = sorted({v for info in all_cells.values() for v, _ in info["shares"]})
     village_index = {v: i for i, v in enumerate(vids)}
-    inv_index = {i: v for v, i in village_index.items()}
 
-    # root: pure cells with len<=5 (gh4/gh5) + index of gh6 refined prefixes
     root_cells = {gh: info for gh, info in all_cells.items() if info["pure"] and len(gh) <= 5}
     refined = {gh: info for gh, info in all_cells.items() if gh not in root_cells}
-
     by_gh6 = collections.defaultdict(dict)
     for gh, info in refined.items():
-        by_gh6[gh[:6] if len(gh) >= 6 else gh].update({gh: info})
-
-    # also put pure gh6+ into gh6 files? pure long keys stay in refined files
-    sizes = {"root": 0, "gh6": []}
+        by_gh6[gh[:6] if len(gh) >= 6 else gh.ljust(6, "0")[:6]].update({gh: info})
 
     root_payload = {
         "v": VERSION,
         "villages": {v: all_meta[v] for v in vids if v in all_meta},
         "vid_order": vids,
+        "merge_rule": "all_32_children_exist_pure_same_village",
     }
     root_bin = write_binary_chunk(root_cells, village_index)
     root_json = json.dumps(root_payload, separators=(",", ":")).encode()
     root_path = out / "root.bin.gz"
     with gzip.open(root_path, "wb", compresslevel=9) as f:
         f.write(struct.pack(">I", len(root_json)) + root_json + root_bin)
-    sizes["root"] = root_path.stat().st_size
 
+    gh6_sizes = []
     for prefix, cells in sorted(by_gh6.items()):
         raw = write_binary_chunk(cells, village_index)
         p = out / "gh6" / f"{prefix}.bin.gz"
         with gzip.open(p, "wb", compresslevel=9) as f:
             f.write(raw)
-        sizes["gh6"].append(p.stat().st_size)
+        gh6_sizes.append(p.stat().st_size)
 
-    # also write a small JSON cell dump for invariants (gh keys + pure + majority)
-    inv_cells = []
-    for gh, info in all_cells.items():
-        inv_cells.append({"g": gh, "pure": info["pure"], "t": [{"v": v, "s": round(s, 5)} for v, s in info["shares"][:3]], "prec": info["prec"]})
-    # pack by gh4 for check_invariants compatibility
-    by_p = collections.defaultdict(list)
-    for c in inv_cells:
-        by_p[c["g"][:4]].append(c)
-    inv_dir = out / "chunks_gh4"
-    inv_dir.mkdir(exist_ok=True)
-    for prefix, cells in by_p.items():
-        payload = {"v": VERSION, "prefix": prefix, "cells": cells,
-                   "villages": {v: all_meta[v] for c in cells for t in c["t"] for v in [t["v"]] if v in all_meta}}
-        raw = json.dumps(payload, separators=(",", ":")).encode()
-        with gzip.open(inv_dir / f"{prefix}.json.gz", "wb", compresslevel=9) as f:
-            f.write(raw)
-
-    gh6_sorted = sorted(sizes["gh6"]) if sizes["gh6"] else [0]
+    gh6_sorted = sorted(gh6_sizes) if gh6_sizes else [0]
     man = {
         "dataset_version": VERSION,
         "built_at": datetime.now(timezone.utc).isoformat(),
         "crs_area": "EPSG:32736",
         "pure_rule": "exclusive_single_village",
-        "merge": "full32_children_same_village_up_to_gh4",
+        "merge": "all_32_children_exist_pure_same_village_up_to_gh4",
         "format": "binary_delta_varint_gz",
         "village_total": len(all_meta),
         "cells_total": len(all_cells),
         "pure_cells": sum(1 for c in all_cells.values() if c["pure"]),
-        "root_gz_bytes": sizes["root"],
-        "gh6_file_count": len(sizes["gh6"]),
+        "root_gz_bytes": root_path.stat().st_size,
+        "gh6_file_count": len(gh6_sizes),
         "gh6_p50": gh6_sorted[len(gh6_sorted)//2],
         "gh6_p95": gh6_sorted[int(0.95 * (len(gh6_sorted)-1))] if len(gh6_sorted) > 1 else gh6_sorted[0],
         "gh6_max": max(gh6_sorted),
     }
     json.dump(man, open(out / "manifest.json", "w"), indent=2)
     print(json.dumps(man, indent=2))
-    print("DONE hierarchical binary build")
+    print("DONE hier2 strict merge")
 
 if __name__ == "__main__":
     main()
