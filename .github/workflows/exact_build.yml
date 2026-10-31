@@ -8,7 +8,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # start with smoke 4 districts; expand after invariants pass
         district: ["11", "12", "13", "37"]
     steps:
       - uses: actions/checkout@v4
@@ -58,13 +57,12 @@ jobs:
                   by_p[ch["prefix"]].extend(ch["cells"])
                   villages.update(ch.get("villages", {}))
           for prefix, cells in by_p.items():
-              # dedupe by g keeping highest prec
               best = {}
               for c in cells:
                   g = c["g"]
                   if g not in best or c.get("prec", 7) > best[g].get("prec", 7):
                       best[g] = c
-              payload = {"v": "2026.10.31.exact1", "prefix": prefix, "cells": list(best.values()),
+              payload = {"v": "2026.10.31.exact2", "prefix": prefix, "cells": list(best.values()),
                          "villages": {vid: villages[vid] for c in best.values() for t in c["t"] for vid in [t["v"]] if vid in villages}}
               raw = json.dumps(payload, separators=(",", ":")).encode()
               out = Path(f"artifacts/exact_out/chunks_gh4/{prefix}.json.gz")
@@ -82,6 +80,7 @@ jobs:
             data/invariants_report.json
             data/size_benchmark.json
             data/manifest_exact.json
+          if-no-files-found: warn
   national-osm:
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -97,10 +96,16 @@ jobs:
             python scripts/download_nisr_geometry.py
           fi
       - run: python scripts/build_national_osm.py
+      - run: python scripts/extract_kivu_piece.py
+      - run: python scripts/kivu_deviation.py
       - uses: actions/upload-artifact@v4
         with:
-          name: national-osm
+          name: national-kivu
           path: |
             data/rwanda_national.geojson
             data/rwanda_national_meta.json
             data/osm_rwanda_boundary.geojson
+            data/kivu_water_piece.geojson
+            data/kivu_piece_meta.json
+            data/kivu_test_points.csv
+            data/kivu_deviation_report.json
