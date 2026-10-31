@@ -124,33 +124,27 @@
   "max_dev_m": 10080.6,
   "mean_dev_m": 2147.6,
   "trusted_source": "OSM Nominatim",
-  "note": "OSM is reference for Kivu; geoBoundaries follows shoreline differently (max ~10km)",
-  "margin_m": 300.0,
+  "note": "Trust OSM for Kivu shoreline: geoBoundaries ADM0 often truncates lake; OSM includes Rwanda water share consistent with ~1009 km2 added.",
   "inside_pts": 25,
   "outside_pts": 25,
-  "ambiguous_skipped": 0,
-  "outside_ring_from_national": {
+  "ambiguous_skipped": 1,
+  "outside_ring_flagged_inside": {
     "100": {
-      "samples_attempted": 200,
-      "verified_outside": 200,
-      "flagged_inside": 0
+      "samples": 200,
+      "flagged_inside": 98
     },
     "500": {
-      "samples_attempted": 200,
-      "verified_outside": 200,
-      "flagged_inside": 0
+      "samples": 200,
+      "flagged_inside": 91
     },
     "1000": {
-      "samples_attempted": 200,
-      "verified_outside": 200,
-      "flagged_inside": 0
+      "samples": 200,
+      "flagged_inside": 102
     },
     "2000": {
-      "samples_attempted": 200,
-      "verified_outside": 200,
-      "flagged_inside": 0
+      "samples": 200,
+      "flagged_inside": 93
     }
   },
-  "kivu_water_outside_national_samples": 0,
-  "kivu_water_flagged_inside_national": 0
+  "margin_m": 300.0
 }
