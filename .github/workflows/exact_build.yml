@@ -63,7 +63,7 @@ jobs:
                   g = c["g"]
                   if g not in best or c.get("prec", 7) > best[g].get("prec", 7):
                       best[g] = c
-              payload = {"v": "2026.10.31.exact2", "prefix": prefix, "cells": list(best.values()),
+              payload = {"v": "2026.10.31.exact3", "prefix": prefix, "cells": list(best.values()),
                          "villages": {vid: villages[vid] for c in best.values() for t in c["t"] for vid in [t["v"]] if vid in villages}}
               raw = json.dumps(payload, separators=(",", ":")).encode()
               out = Path(f"artifacts/exact_out/chunks_gh4/{prefix}.json.gz")
@@ -72,10 +72,9 @@ jobs:
               print(prefix, len(best), out.stat().st_size)
           PY
       - name: Invariants
-        id: inv
         run: |
           python scripts/check_invariants.py --districts 11,12,13,37 --chunks artifacts/exact_out/chunks_gh4 --out data/invariants_report.json || true
-          cat data/invariants_report.json || echo '{}'
+          cat data/invariants_report.json
       - run: python scripts/size_benchmark.py --chunks artifacts/exact_out/chunks_gh4 --out data/size_benchmark.json || echo '{"note":"size_benchmark skipped or failed"}' > data/size_benchmark.json
       - uses: actions/upload-artifact@v4
         with:
@@ -84,7 +83,6 @@ jobs:
             artifacts/exact_out/
             data/invariants_report.json
             data/size_benchmark.json
-            data/manifest_exact.json
           if-no-files-found: warn
   national-osm:
     runs-on: ubuntu-latest
@@ -103,20 +101,16 @@ jobs:
       - run: python scripts/build_national_osm.py
       - run: python scripts/extract_kivu_piece.py
       - run: python scripts/kivu_deviation.py
-      - name: Copy deviation report name
-        run: |
-          cp -f data/kivu_deviation_report.json data/kivu_deviation.json || true
+      - run: cp -f data/kivu_deviation_report.json data/kivu_deviation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: national-kivu
           path: |
             data/rwanda_national.geojson
             data/rwanda_national_meta.json
-            data/osm_rwanda_boundary.geojson
             data/kivu_water_piece.geojson
             data/kivu_piece_meta.json
             data/kivu_test_points.csv
-            data/kivu_deviation_report.json
             data/kivu_deviation.json
   publish-results:
     needs: [merge-invariants, national-osm]
@@ -127,61 +121,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           pattern: national-kivu
-          path: art_nat
+          path: /tmp/art_nat
           merge-multiple: true
       - uses: actions/download-artifact@v4
         with:
           pattern: exact-merged-invariants
-          path: art_inv
+          path: /tmp/art_inv
           merge-multiple: true
-      - name: Stage data files
+      - name: Collect files to /tmp/pubdata
         run: |
-          mkdir -p data
-          cp -f art_nat/data/kivu_water_piece.geojson data/ 2>/dev/null || cp -f art_nat/kivu_water_piece.geojson data/ || true
-          cp -f art_nat/data/rwanda_national.geojson data/ 2>/dev/null || cp -f art_nat/rwanda_national.geojson data/ || true
-          cp -f art_nat/data/kivu_test_points.csv data/ 2>/dev/null || cp -f art_nat/kivu_test_points.csv data/ || true
-          cp -f art_nat/data/kivu_deviation.json data/ 2>/dev/null || cp -f art_nat/kivu_deviation.json data/ || true
-          cp -f art_nat/data/kivu_deviation_report.json data/kivu_deviation.json 2>/dev/null || true
-          cp -f art_nat/data/kivu_piece_meta.json data/ 2>/dev/null || cp -f art_nat/kivu_piece_meta.json data/ || true
-          cp -f art_inv/data/invariants_report.json data/ 2>/dev/null || cp -f art_inv/invariants_report.json data/ || true
-          cp -f art_inv/data/size_benchmark.json data/ 2>/dev/null || cp -f art_inv/size_benchmark.json data/ || true
-          ls -la data/
-          echo "--- invariants ---"
-          cat data/invariants_report.json || true
-          echo "--- kivu_piece_meta ---"
-          cat data/kivu_piece_meta.json || true
-          echo "--- kivu_deviation (summary) ---"
-          python3 -c "import json; d=json.load(open('data/kivu_deviation.json')); print({k:d[k] for k in d if k!='positions'}); print('positions', len(d.get('positions',[])))" 2>/dev/null || true
+          mkdir -p /tmp/pubdata
+          find /tmp/art_nat /tmp/art_inv -type f \( -name 'kivu_water_piece.geojson' -o -name 'rwanda_national.geojson' -o -name 'kivu_test_points.csv' -o -name 'kivu_deviation.json' -o -name 'kivu_piece_meta.json' -o -name 'invariants_report.json' -o -name 'size_benchmark.json' \) -exec cp -f {} /tmp/pubdata/ \;
+          ls -la /tmp/pubdata
+          echo '--- invariants ---'; cat /tmp/pubdata/invariants_report.json || true
+          echo '--- kivu_piece_meta ---'; cat /tmp/pubdata/kivu_piece_meta.json || true
       - name: Commit to results branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin results 2>/dev/null || true
-          if git rev-parse --verify origin/results >/dev/null 2>&1; then
-            git checkout -B results origin/results
-          else
-            git checkout --orphan results
-            git rm -rf . >/dev/null 2>&1 || true
-          fi
-          mkdir -p data
-          # re-copy from workspace path saved before branch switch: use /tmp stash
-        # better: stash files before branch switch
-      - name: Publish files to results branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          mkdir -p /tmp/pubdata
-          for f in kivu_water_piece.geojson rwanda_national.geojson kivu_test_points.csv \
-                   kivu_deviation.json kivu_piece_meta.json invariants_report.json size_benchmark.json; do
-            [ -f data/$f ] && cp data/$f /tmp/pubdata/ || true
-          done
-          ls -la /tmp/pubdata
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin results 2>/dev/null || true
@@ -189,20 +151,20 @@ jobs:
             git checkout -B results origin/results
           else
             git checkout --orphan results
-            git reset --hard
+            git reset
           fi
           mkdir -p data
-          cp -f /tmp/pubdata/* data/ 2>/dev/null || true
+          cp -f /tmp/pubdata/* data/
           git add -f data/kivu_water_piece.geojson data/rwanda_national.geojson \
                     data/kivu_test_points.csv data/kivu_deviation.json \
                     data/kivu_piece_meta.json data/invariants_report.json \
-                    data/size_benchmark.json 2>/dev/null || true
+                    data/size_benchmark.json
           if git diff --cached --quiet; then
-            echo "No changes to commit"
-            git rev-parse HEAD
+            echo "No changes"
+            git log -1 --oneline || true
           else
-            git commit -m "results: national/kivu/invariants from exact_build run ${{ github.run_id }}"
-            git push origin results
+            git commit -m "results: run ${{ github.run_id }}"
+            git push -u origin results
             echo "RESULTS_SHA=$(git rev-parse HEAD)"
             git rev-parse HEAD
           fi

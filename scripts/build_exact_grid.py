@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Exact-geometry geohash grid: FULL lattice enumeration, no centre sampling.
-Area CRS: EPSG:32736 (UTM 36S). PURE if >=99.9% of village-covered cell area is one village.
+Area CRS: EPSG:32736. PURE only if exactly one village intersects the cell (no multi-village sliver).
 MIXED refined to gh8 then gh9 with the same lattice method.
 """
 from __future__ import annotations
@@ -14,17 +14,10 @@ from shapely.prepared import prep
 import pygeohash as pgh
 from pyproj import Transformer
 
-VERSION = "2026.10.31.exact2"
+VERSION = "2026.10.31.exact3"
 TO_UTM = Transformer.from_crs("EPSG:4326", "EPSG:32736", always_xy=True)
-PURE_FRAC = 0.999
-
-# Lattice half-sizes (lat_err, lon_err) from pygeohash decode_exactly at Rwanda latitude
-# Full cell size = 2 * err
-LATTICE = {
-    7: (0.001373291015625 / 2, 0.001373291015625 / 2),  # will recompute from encode
-    8: (0.000171661376953125 / 2, 0.00034332275390625 / 2),
-    9: (4.291534423828125e-05 / 2, 4.291534423828125e-05 / 2),
-}
+# Exclusive pure: any second village with positive intersection area => MIXED
+PURE_FRAC = 1.0
 
 def encode(lat, lon, p):
     return pgh.encode(lat, lon, precision=p)
@@ -34,7 +27,6 @@ def gh_bbox(gh):
     return (lon - lon_err, lat - lat_err, lon + lon_err, lat + lat_err)
 
 def lattice_step(precision):
-    """Return (dlat, dlon) full cell size at this precision near Rwanda."""
     _, _, lat_err, lon_err = pgh.decode_exactly(pgh.encode(-2.0, 30.0, precision))
     return 2 * lat_err, 2 * lon_err
 
@@ -48,21 +40,9 @@ def area_utm(geom):
         return 0.0
 
 def cells_covering_polygon(poly, precision):
-    """Enumerate EVERY geohash cell of given precision whose rectangle intersects poly.
-
-    Uses the regular geohash lattice: walk integer steps of (dlat, dlon) across the
-    polygon bbox expanded by one cell, encode each lattice centre, dedupe, then
-    confirm intersects with prepared polygon.
-    """
     dlat, dlon = lattice_step(precision)
     minx, miny, maxx, maxy = poly.bounds
-    # expand by one full cell so edge-touching cells are included
-    minx -= dlon
-    maxx += dlon
-    miny -= dlat
-    maxy += dlat
-    # snap start to lattice by encoding SW corner and taking its centre, then step
-    # Integer indices relative to origin at (0,0) in degrees is fine for local bbox
+    minx -= dlon; maxx += dlon; miny -= dlat; maxy += dlat
     i0 = math.floor(miny / dlat) - 1
     i1 = math.ceil(maxy / dlat) + 1
     j0 = math.floor(minx / dlon) - 1
@@ -83,12 +63,10 @@ def cells_covering_polygon(poly, precision):
             bb = box(*gh_bbox(gh))
             if prepared.intersects(bb):
                 seen[gh] = bb
-    return seen  # gh -> bbox polygon
+    return seen
 
 def refine_mixed(gh, village_geoms, village_ids, precision_next):
-    """Subdivide parent cell into full lattice of precision_next intersecting any village."""
     parent_bb = box(*gh_bbox(gh))
-    # union of villages clipped to parent for faster tests
     dlat, dlon = lattice_step(precision_next)
     minx, miny, maxx, maxy = parent_bb.bounds
     i0 = math.floor(miny / dlat) - 1
@@ -112,14 +90,14 @@ def refine_mixed(gh, village_geoms, village_ids, precision_next):
                     a = area_utm(g.intersection(cb))
                 except Exception:
                     a = 0.0
-                if a > 0:
+                if a > 1e-6:  # ignore tiny numerical noise m2
                     areas[vid] = a
             if not areas:
                 continue
             total = sum(areas.values())
             ranked = sorted(areas.items(), key=lambda x: -x[1])
             shares = [{"v": v, "s": round(a / total, 5)} for v, a in ranked[:5]]
-            pure = len(areas) == 1 or (ranked[0][1] / total >= PURE_FRAC)
+            pure = len(areas) == 1
             result[child] = {"t": shares, "pure": pure, "prec": precision_next}
     return result
 
@@ -151,7 +129,7 @@ def build_district(feats):
                 a = area_utm(g.intersection(bb))
             except Exception:
                 a = 0.0
-            if a > 0:
+            if a > 1e-6:
                 cell_areas[gh][ids[i]] += a
 
     cells = {}
@@ -162,7 +140,7 @@ def build_district(feats):
             continue
         ranked = sorted(ctr.items(), key=lambda x: -x[1])
         shares = [{"v": v, "s": round(a / total, 5)} for v, a in ranked[:5]]
-        pure = len(ctr) == 1 or (ranked[0][1] / total >= PURE_FRAC)
+        pure = len(ctr) == 1
         if pure:
             cells[gh] = {"t": shares[:1], "pure": True, "prec": 7}
         else:
@@ -244,7 +222,7 @@ def main():
         "dataset_version": VERSION,
         "built_at": datetime.now(timezone.utc).isoformat(),
         "crs_area": "EPSG:32736",
-        "pure_frac": PURE_FRAC,
+        "pure_rule": "exclusive_single_village",
         "enumeration": "full_lattice_no_sampling",
         "village_total": len(all_meta),
         "cells_total": len(all_cells),
@@ -256,7 +234,7 @@ def main():
     json.dump(man, open(out / "manifest.json", "w"), indent=2)
     json.dump(man, open("data/manifest_exact.json", "w"), indent=2)
     print(json.dumps({k: man[k] for k in ("village_total", "cells_total", "pure_cells", "max_chunk_gz")}, indent=2))
-    print("DONE exact build lattice")
+    print("DONE exact build exclusive pure")
 
 if __name__ == "__main__":
     main()
