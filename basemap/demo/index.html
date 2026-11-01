@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Iwacu Rwanda — base map</title>
+  <link rel="stylesheet" href="../vendor/maplibre-gl.css" />
+  <script src="../vendor/maplibre-gl.js"></script>
+  <script src="../vendor/pmtiles.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+    #map { position: absolute; inset: 0; }
+    #bar { position: absolute; z-index: 2; left: 8px; right: 8px; top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+    #bar button { border: 0; border-radius: 8px; padding: 8px 12px; background: #0f766e; color: #fff; font-size: 14px; }
+    #attr { position: absolute; z-index: 2; left: 8px; bottom: 8px; right: 8px; background: rgba(255,255,255,.92); padding: 6px 8px; border-radius: 6px; font-size: 11px; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <button type="button" id="btn-kigali">Kigali</button>
+    <button type="button" id="btn-kivu">Nyamasheke / Kivu</button>
+    <button type="button" id="btn-musanze">Musanze</button>
+  </div>
+  <div id="map"></div>
+  <div id="attr">
+    © OpenStreetMap contributors · ODbL ·
+    © OpenMapTiles · Map data from Geofabrik Rwanda extract ·
+    MapLibre GL · PMTiles · Noto Sans (SIL OFL 1.1)
+  </div>
+  <script>
+    const protocol = new pmtiles.Protocol();
+    maplibregl.addProtocol("pmtiles", protocol.tile);
+    const base = new URL("..", window.location.href).href.replace(/\/$/, "");
+    const tilesUrl = base + "/rwanda.pmtiles";
+    const glyphs = base + "/vendor/fonts/{fontstack}/{range}.pbf";
+    const style = {
+      version: 8,
+      sources: { protomaps: { type: "vector", url: "pmtiles://" + tilesUrl, attribution: "© OpenStreetMap · © OpenMapTiles" } },
+      glyphs,
+      layers: [
+        { id: "bg", type: "background", paint: { "background-color": "#f0f4f0" } },
+        { id: "landcover", type: "fill", source: "protomaps", "source-layer": "landcover", paint: { "fill-color": "#c6ddb0", "fill-opacity": 0.55 } },
+        { id: "landuse", type: "fill", source: "protomaps", "source-layer": "landuse", paint: { "fill-color": "#d5e8c8", "fill-opacity": 0.4 } },
+        { id: "water", type: "fill", source: "protomaps", "source-layer": "water", paint: { "fill-color": "#7eb6d9" } },
+        { id: "waterway", type: "line", source: "protomaps", "source-layer": "waterway", paint: { "line-color": "#7eb6d9", "line-width": 1 } },
+        { id: "buildings", type: "fill", source: "protomaps", "source-layer": "building", minzoom: 13, paint: { "fill-color": "#c9c4b8", "fill-opacity": 0.7 } },
+        { id: "roads", type: "line", source: "protomaps", "source-layer": "transportation", paint: { "line-color": "#f0c27a", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 14, 3] } },
+        { id: "places", type: "symbol", source: "protomaps", "source-layer": "place",
+          layout: { "text-field": ["coalesce", ["get", "name"], ""], "text-size": 12, "text-font": ["Noto Sans Regular"] },
+          paint: { "text-color": "#222", "text-halo-color": "#fff", "text-halo-width": 1.2 } }
+      ]
+    };
+    const map = new maplibregl.Map({ container: "map", style, center: [30.06, -1.95], zoom: 11 });
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
+    document.getElementById("btn-kigali").onclick = () => map.flyTo({ center: [30.06, -1.95], zoom: 12 });
+    document.getElementById("btn-kivu").onclick = () => map.flyTo({ center: [29.10, -2.30], zoom: 11 });
+    document.getElementById("btn-musanze").onclick = () => map.flyTo({ center: [29.63, -1.50], zoom: 12 });
+  </script>
+</body>
+</html>
