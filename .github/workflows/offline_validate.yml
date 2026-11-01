@@ -1,0 +1,35 @@
+name: offline-validate
+concurrency:
+  group: offline-validate
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+    inputs:
+      district:
+        description: "District id (e.g. 11) or all-smoke"
+        default: "11"
+jobs:
+  one-district:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely
+      - name: Ensure geojson
+        run: |
+          if [ ! -f data/rwanda_villages_full.geojson ]; then
+            python scripts/download_nisr_geometry.py
+          fi
+      - name: Generate points SEED-TUNE and SEED-TEST
+        run: |
+          D="${{ github.event.inputs.district || '11' }}"
+          python scripts/offline_validate_district.py --district "$D" --seed 424242
+          python scripts/offline_validate_district.py --district "$D" --seed 20261030
+          ls -lh artifacts/offline_val/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-val-${{ github.event.inputs.district || '11' }}
+          path: artifacts/offline_val/
