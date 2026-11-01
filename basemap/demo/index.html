@@ -4,9 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Iwacu Rwanda — base map</title>
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
+  <!-- CHANGED 2026-11-01 GROK: all assets same-origin under basemap/vendor; see docs/HANDOFF.md -->
+  <link rel="stylesheet" href="../vendor/maplibre-gl.css" />
+  <script src="../vendor/maplibre-gl.js"></script>
+  <script src="../vendor/pmtiles.js"></script>
   <style>
     html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
     #map { position: absolute; inset: 0; }
@@ -18,7 +19,6 @@
       border: 0; border-radius: 8px; padding: 8px 12px; background: #0f766e; color: #fff;
       font-size: 14px; cursor: pointer;
     }
-    #bar button:active { background: #115e59; }
     #attr {
       position: absolute; z-index: 2; left: 8px; bottom: 8px;
       background: rgba(255,255,255,.9); padding: 4px 8px; border-radius: 6px; font-size: 11px;
@@ -36,9 +36,9 @@
   <script>
     const protocol = new pmtiles.Protocol();
     maplibregl.addProtocol("pmtiles", protocol.tile);
-
-    // Same-origin path on GitHub Pages
-    const tilesUrl = new URL("../rwanda.pmtiles", window.location.href).href;
+    const base = new URL("..", window.location.href).href.replace(/\/$/, "");
+    const tilesUrl = base + "/rwanda.pmtiles";
+    const glyphs = base + "/vendor/fonts/{fontstack}/{range}.pbf";
 
     const style = {
       version: 8,
@@ -50,88 +50,32 @@
           attribution: "© OpenStreetMap contributors"
         }
       },
-      glyphs: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
+      glyphs,
       layers: [
         { id: "bg", type: "background", paint: { "background-color": "#f0f4f0" } },
-        {
-          id: "earth",
-          type: "fill",
-          source: "protomaps",
-          "source-layer": "earth",
-          paint: { "fill-color": "#e8e4d8" }
-        },
-        {
-          id: "landcover",
-          type: "fill",
-          source: "protomaps",
-          "source-layer": "landcover",
-          paint: { "fill-color": "#c6ddb0", "fill-opacity": 0.55 }
-        },
-        {
-          id: "landuse",
-          type: "fill",
-          source: "protomaps",
-          "source-layer": "landuse",
-          paint: { "fill-color": "#d5e8c8", "fill-opacity": 0.4 }
-        },
-        {
-          id: "water",
-          type: "fill",
-          source: "protomaps",
-          "source-layer": "water",
-          paint: { "fill-color": "#7eb6d9" }
-        },
-        {
-          id: "waterway",
-          type: "line",
-          source: "protomaps",
-          "source-layer": "waterway",
-          paint: { "line-color": "#7eb6d9", "line-width": 1 }
-        },
-        {
-          id: "buildings",
-          type: "fill",
-          source: "protomaps",
-          "source-layer": "buildings",
-          minzoom: 13,
-          paint: { "fill-color": "#c9c4b8", "fill-opacity": 0.7 }
-        },
-        {
-          id: "roads_minor",
-          type: "line",
-          source: "protomaps",
-          "source-layer": "roads",
-          filter: ["in", "pmap:kind", "minor_road", "other", "path"],
-          paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 14, 2] }
-        },
-        {
-          id: "roads_major",
-          type: "line",
-          source: "protomaps",
-          "source-layer": "roads",
-          filter: ["in", "pmap:kind", "major_road", "medium_road", "highway"],
-          paint: { "line-color": "#f0c27a", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 14, 4] }
-        },
-        {
-          id: "rail",
-          type: "line",
-          source: "protomaps",
-          "source-layer": "roads",
-          filter: ["==", "pmap:kind", "rail"],
-          paint: { "line-color": "#999", "line-dasharray": [2, 2], "line-width": 1.2 }
-        },
-        {
-          id: "places",
-          type: "symbol",
-          source: "protomaps",
-          "source-layer": "places",
+        { id: "landcover", type: "fill", source: "protomaps", "source-layer": "landcover",
+          paint: { "fill-color": "#c6ddb0", "fill-opacity": 0.55 } },
+        { id: "landuse", type: "fill", source: "protomaps", "source-layer": "landuse",
+          paint: { "fill-color": "#d5e8c8", "fill-opacity": 0.4 } },
+        { id: "park", type: "fill", source: "protomaps", "source-layer": "park",
+          paint: { "fill-color": "#b8d9a0", "fill-opacity": 0.5 } },
+        { id: "water", type: "fill", source: "protomaps", "source-layer": "water",
+          paint: { "fill-color": "#7eb6d9" } },
+        { id: "waterway", type: "line", source: "protomaps", "source-layer": "waterway",
+          paint: { "line-color": "#7eb6d9", "line-width": 1 } },
+        { id: "buildings", type: "fill", source: "protomaps", "source-layer": "building", minzoom: 13,
+          paint: { "fill-color": "#c9c4b8", "fill-opacity": 0.7 } },
+        { id: "roads", type: "line", source: "protomaps", "source-layer": "transportation",
+          paint: { "line-color": "#f0c27a", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 14, 3] } },
+        { id: "boundary", type: "line", source: "protomaps", "source-layer": "boundary",
+          paint: { "line-color": "#888", "line-width": 1, "line-dasharray": [2, 2] } },
+        { id: "places", type: "symbol", source: "protomaps", "source-layer": "place",
           layout: {
-            "text-field": ["coalesce", ["get", "name"], ["get", "name:en"], ""],
+            "text-field": ["coalesce", ["get", "name"], ""],
             "text-size": ["interpolate", ["linear"], ["zoom"], 6, 10, 12, 14],
             "text-font": ["Noto Sans Regular"]
           },
-          paint: { "text-color": "#222", "text-halo-color": "#fff", "text-halo-width": 1.2 }
-        }
+          paint: { "text-color": "#222", "text-halo-color": "#fff", "text-halo-width": 1.2 } }
       ]
     };
 
@@ -142,7 +86,6 @@
       zoom: 11
     });
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
-
     document.getElementById("btn-kigali").onclick = () => map.flyTo({ center: [30.06, -1.95], zoom: 12 });
     document.getElementById("btn-kivu").onclick = () => map.flyTo({ center: [29.10, -2.30], zoom: 11 });
     document.getElementById("btn-musanze").onclick = () => map.flyTo({ center: [29.63, -1.50], zoom: 12 });

@@ -1,0 +1,130 @@
+name: basemap-vendor-selfcontained
+concurrency:
+  group: basemap-vendor
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+jobs:
+  vendor-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download vendor assets
+        run: |
+          set -e
+          V=basemap/vendor
+          mkdir -p "$V/fonts/Noto Sans Regular" "$V/licenses"
+          # MapLibre 4.7.1
+          curl -fsSL -o "$V/maplibre-gl.js" "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"
+          curl -fsSL -o "$V/maplibre-gl.css" "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+          curl -fsSL -o "$V/licenses/MAPLIBRE-LICENSE.txt" "https://raw.githubusercontent.com/maplibre/maplibre-gl-js/main/LICENSE.txt" || echo "BSD-3-Clause MapLibre" > "$V/licenses/MAPLIBRE-LICENSE.txt"
+          # pmtiles 3.2.0
+          curl -fsSL -o "$V/pmtiles.js" "https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"
+          echo "BSD-3-Clause PMTiles https://github.com/protomaps/PMTiles" > "$V/licenses/PMTILES-LICENSE.txt"
+          # Glyphs: Noto Sans Regular (Open Font License) — basic Unicode ranges for place names
+          BASE="https://protomaps.github.io/basemaps-assets/fonts/Noto%20Sans%20Regular"
+          for r in 0-255 256-511 512-767 768-1023 1024-1279; do
+            curl -fsSL -o "$V/fonts/Noto Sans Regular/${r}.pbf" "$BASE/${r}.pbf" || true
+          done
+          echo "SIL Open Font License — Noto Sans (Google); served via protomaps basemaps-assets build" > "$V/licenses/NOTO-SANS-OFL.txt"
+          ls -lhR "$V" | head -80
+
+      - name: Ensure rwanda.pmtiles on workspace
+        run: |
+          if [ ! -f basemap/rwanda.pmtiles ]; then
+            git fetch origin gh-pages
+            git checkout origin/gh-pages -- basemap/rwanda.pmtiles basemap/build_report.json || true
+          fi
+          ls -lh basemap/rwanda.pmtiles
+
+      - name: Stage site
+        run: |
+          mkdir -p _site/basemap/demo _site/basemap/vendor
+          cp -a basemap/vendor/. _site/basemap/vendor/
+          cp basemap/demo/index.html _site/basemap/demo/
+          cp basemap/rwanda.pmtiles _site/basemap/
+          cp ATTRIBUTION.md _site/ || true
+          cp basemap/build_report.json _site/basemap/ || true
+          printf '%s\n' '<!DOCTYPE html><meta http-equiv="refresh" content="0;url=basemap/demo/">' > _site/index.html
+
+      - name: Deploy gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _site
+          force_orphan: true
+
+      - name: Try enable GitHub Pages API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          CODE=$(curl -s -o /tmp/pages.json -w "%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/eddyizere24-collab/iwacu-rwanda-grid/pages \
+            -d '{"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}')
+          echo "POST_pages_status=$CODE"
+          cat /tmp/pages.json
+          CODE2=$(curl -s -o /tmp/pages2.json -w "%{http_code}" -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/eddyizere24-collab/iwacu-rwanda-grid/pages \
+            -d '{"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}')
+          echo "PUT_pages_status=$CODE2"
+          cat /tmp/pages2.json
+          echo "$CODE $CODE2" > pages_api_result.txt
+
+      - name: Playwright zero-external proof (if Pages live)
+        run: |
+          npm init -y >/dev/null
+          npm install -q playwright@1.49.0
+          npx playwright install --with-deps chromium
+          python3 - <<'PY' > /dev/null
+          PY
+          node <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          (async () => {
+            const url = process.env.DEMO_URL || 'https://eddyizere24-collab.github.io/iwacu-rwanda-grid/basemap/demo/';
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+            const reqs = [];
+            page.on('request', r => reqs.push(r.url()));
+            try {
+              await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+              await page.waitForTimeout(3000);
+            } catch (e) {
+              console.log('GOTO_ERROR', String(e));
+            }
+            const origins = [...new Set(reqs.map(u => { try { return new URL(u).origin; } catch { return u; } }))];
+            const external = reqs.filter(u => {
+              try {
+                const h = new URL(u).hostname;
+                return h && !h.endsWith('github.io') && !h.endsWith('githubusercontent.com');
+              } catch { return true; }
+            });
+            const report = { url, n_requests: reqs.length, origins, external, all_urls: reqs.slice(0, 80) };
+            fs.writeFileSync('playwright_requests.json', JSON.stringify(report, null, 2));
+            console.log(JSON.stringify(report, null, 2));
+            await browser.close();
+            if (external.length) process.exitCode = 2;
+          })();
+          JS
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vendor-proof
+          path: |
+            playwright_requests.json
+            pages_api_result.txt
