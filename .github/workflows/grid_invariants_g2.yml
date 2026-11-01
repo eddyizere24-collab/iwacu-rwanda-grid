@@ -1,0 +1,84 @@
+name: grid-invariants-g2
+concurrency:
+  group: grid-invariants-g2
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+  push:
+    branches: [wip/g2]
+    paths:
+      - "scripts/build_exact_grid.py"
+      - "scripts/grid_codec.py"
+      - "scripts/check_invariants_binary.py"
+      - ".github/workflows/grid_invariants_g2.yml"
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely pygeohash pyproj
+      - name: Ensure geojson
+        run: |
+          if [ ! -f data/rwanda_villages_full.geojson ]; then
+            python scripts/download_nisr_geometry.py
+          fi
+      - name: Build 4 districts
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          with open("data/rwanda_villages_full.geojson") as f:
+              fc = json.load(f)
+          keep = {"11", "12", "13", "37"}
+          fc["features"] = [ft for ft in fc["features"] if str(ft["properties"]["district_id"]) in keep]
+          Path("data/rwanda_4d.geojson").write_text(json.dumps(fc))
+          print(len(fc["features"]))
+          PY
+          python scripts/build_exact_grid.py --geojson data/rwanda_4d.geojson --out artifacts/exact_out
+      - name: Codec round-trip
+        run: |
+          export PYTHONPATH=scripts
+          python - <<'PY'
+          import json, random
+          from pathlib import Path
+          from grid_codec import load_root, load_gh6_file, write_binary_chunk, read_binary_chunk, longest_prefix
+          import pygeohash as pgh
+          meta, root, vids = load_root(Path("artifacts/exact_out/root.bin.gz"))
+          cells = dict(root)
+          for p in Path("artifacts/exact_out/gh6").glob("*.bin.gz"):
+              cells.update(load_gh6_file(p, vids))
+          vindex = {v: i for i, v in enumerate(vids)}
+          decoded = read_binary_chunk(write_binary_chunk(cells, vindex), vids)
+          miss = set(cells) - set(decoded)
+          rng = random.Random(42)
+          disagree = 0
+          for _ in range(100000):
+              lat = rng.uniform(-2.9, -1.0)
+              lon = rng.uniform(28.8, 30.9)
+              gh9 = pgh.encode(lat, lon, 9)
+              kj, ij = longest_prefix(gh9, cells)
+              kb, ib = longest_prefix(gh9, decoded)
+              vj = ij["shares"][0][0] if ij else None
+              vb = ib["shares"][0][0] if ib else None
+              if kj != kb or vj != vb:
+                  disagree += 1
+          print(json.dumps({"n_cells": len(cells), "key_missing": len(miss), "lookup_disagree_100k": disagree}))
+          assert len(miss) == 0 and disagree == 0
+          PY
+      - name: Invariants
+        run: |
+          export PYTHONPATH=scripts
+          python scripts/check_invariants_binary.py --districts 11,12,13,37 --out-dir artifacts/exact_out --out data/invariants_report.json || true
+          cat data/invariants_report.json
+      - run: python scripts/size_benchmark.py --out-dir artifacts/exact_out --out data/size_benchmark.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: g2-invariants
+          path: |
+            data/invariants_report.json
+            data/size_benchmark.json
+            artifacts/exact_out/manifest.json

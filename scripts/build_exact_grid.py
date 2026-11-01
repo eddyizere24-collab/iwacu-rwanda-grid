@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Exact lattice + hierarchical pure-merge. Binary IRG2 (string keys)."""
+"""Exact lattice + hierarchical pure-merge. Binary IRG2 (string keys).
+
+CHANGED 2026-11-01 GROK: pure cells must also have cell centroid inside the sole village
+(rejects false pure at borders that caused cross-district c/d fails); see docs/HANDOFF.md
+"""
 from __future__ import annotations
 import argparse, json, gzip, collections, math, struct, sys
 from pathlib import Path
 from datetime import datetime, timezone
-from shapely.geometry import shape, box
+from shapely.geometry import shape, box, Point
 from shapely.ops import transform
 from shapely.validation import make_valid
 from shapely.prepared import prep
@@ -14,7 +18,7 @@ from pyproj import Transformer
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from grid_codec import write_binary_chunk
 
-VERSION = "2026.11.01.irg2"
+VERSION = "2026.11.01.irg2p"
 TO_UTM = Transformer.from_crs("EPSG:4326", "EPSG:32736", always_xy=True)
 BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
 
@@ -92,7 +96,12 @@ def refine_mixed(gh, village_geoms, village_ids, precision_next):
             total = sum(areas.values())
             ranked = sorted(areas.items(), key=lambda x: -x[1])
             shares = [(v, a / total) for v, a in ranked[:5]]
-            result[child] = {"shares": shares, "pure": len(areas) == 1, "prec": precision_next}
+            pure = len(areas) == 1
+            if pure:
+                lat, lon, _, _ = pgh.decode_exactly(child)
+                if not village_geoms[village_ids.index(ranked[0][0])].covers(Point(lon, lat)):
+                    pure = False
+            result[child] = {"shares": shares, "pure": pure, "prec": precision_next}
     return result
 
 def hierarchical_merge(store: dict):
@@ -153,7 +162,13 @@ def build_district(feats):
         total = sum(ctr.values())
         ranked = sorted(ctr.items(), key=lambda x: -x[1])
         shares = [(v, a / total) for v, a in ranked[:5]]
-        if len(ctr) == 1:
+        pure = len(ctr) == 1
+        if pure:
+            lat, lon, _, _ = pgh.decode_exactly(gh)
+            vid = ranked[0][0]
+            if vid not in id_to_idx or not vgeoms[id_to_idx[vid]].covers(Point(lon, lat)):
+                pure = False
+        if pure:
             leaves[gh] = {"pure": True, "shares": shares[:1], "prec": 7}
         else:
             mixed7.append(gh)
@@ -162,6 +177,7 @@ def build_district(feats):
     for gh in mixed7:
         vids = [v for v, _ in cell_areas[gh].most_common()]
         geoms = [vgeoms[id_to_idx[v]] for v in vids if v in id_to_idx]
+        vids = [v for v in vids if v in id_to_idx]
         for child, info in refine_mixed(gh, geoms, vids, 8).items():
             if info["pure"]:
                 leaves[child] = {"pure": True, "shares": info["shares"][:1], "prec": 8}
@@ -217,6 +233,7 @@ def main():
         "villages": {v: all_meta[v] for v in vids if v in all_meta},
         "vid_order": vids,
         "merge_rule": "all_32_children_exist_pure_same_village",
+        "pure_rule": "exclusive_single_village_and_centroid_inside",
         "format": "IRG2",
     }
     root_bin = write_binary_chunk(root_cells, village_index)
@@ -238,7 +255,7 @@ def main():
         "dataset_version": VERSION,
         "built_at": datetime.now(timezone.utc).isoformat(),
         "crs_area": "EPSG:32736",
-        "pure_rule": "exclusive_single_village",
+        "pure_rule": "exclusive_single_village_and_centroid_inside",
         "merge": "all_32_children_exist_pure_same_village_up_to_gh4",
         "format": "IRG2_string_keys_gz",
         "village_total": len(all_meta),
@@ -252,7 +269,7 @@ def main():
     }
     json.dump(man, open(out / "manifest.json", "w"), indent=2)
     print(json.dumps(man, indent=2))
-    print("DONE IRG2")
+    print("DONE IRG2 pure-centroid")
 
 if __name__ == "__main__":
     main()
