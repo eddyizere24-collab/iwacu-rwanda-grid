@@ -18,7 +18,6 @@ jobs:
       - name: Fail on third-party runtime URLs in packages
         run: |
           set -euo pipefail
-          # CHANGED 2026-11-01 GROK: empty-pipe was false-positive; see docs/HANDOFF.md
           hits=$(grep -RInE 'https?://' packages/*/src packages/basemap-style/src/style.json 2>/dev/null || true)
           if [ -n "$hits" ]; then
             echo "$hits"
@@ -30,17 +29,16 @@ jobs:
         run: |
           set -e
           for p in packages/grid-lookup packages/offline-locate packages/landmarks packages/places-search packages/basemap-style; do
-            if [ -f "$p/package.json" ]; then
+            if [ -f "$p/package.json" ] && [ -d "$p/src" ]; then
               echo "=== $p ==="
-              (cd "$p" && npm install && npm run build && (npm test || node --test test/*.test.js || true))
+              (cd "$p" && npm install && npm run build && npm test)
+            else
+              echo "skip $p (no src)"
             fi
           done
       - name: Python syntax check scripts
         run: |
-          if [ -f scripts/dissolve_hierarchy.py ]; then
-            python3 -c "import ast; ast.parse(open('scripts/dissolve_hierarchy.py').read())"
-          fi
-          if [ -f scripts/extract_landmarks.py ]; then
-            python3 -c "import ast; ast.parse(open('scripts/extract_landmarks.py').read())"
-          fi
+          for f in scripts/dissolve_hierarchy.py scripts/extract_landmarks.py; do
+            if [ -f "$f" ]; then python3 -c "import ast; ast.parse(open('$f').read())"; fi
+          done
           echo py_ok
