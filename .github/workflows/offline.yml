@@ -15,7 +15,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Build grid-lookup then offline-locate
-        run: |
-          cd packages/grid-lookup && npm install && npm run build
+      - run: |
+          cd packages/grid-lookup && npm install && npm run build && npm test
           cd ../offline-locate && npm install && npm test
