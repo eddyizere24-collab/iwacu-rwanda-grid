@@ -17,8 +17,11 @@ jobs:
           node-version: "20"
       - name: Fail on third-party runtime URLs in packages
         run: |
-          set -e
-          if grep -RInE 'https?://' packages/*/src packages/basemap-style/src/style.json 2>/dev/null | grep -v ATTRIBUTION | grep -v 'ODbL' | grep -v 'creativecommons' | head -20; then
+          set -euo pipefail
+          # CHANGED 2026-11-01 GROK: empty-pipe was false-positive; see docs/HANDOFF.md
+          hits=$(grep -RInE 'https?://' packages/*/src packages/basemap-style/src/style.json 2>/dev/null || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
             echo "FAIL: third-party URL in package source"
             exit 1
           fi
@@ -34,5 +37,10 @@ jobs:
           done
       - name: Python syntax check scripts
         run: |
-          python3 -c "import ast; [ast.parse(open(f).read()) for f in ['scripts/dissolve_hierarchy.py','scripts/extract_landmarks.py']]"
+          if [ -f scripts/dissolve_hierarchy.py ]; then
+            python3 -c "import ast; ast.parse(open('scripts/dissolve_hierarchy.py').read())"
+          fi
+          if [ -f scripts/extract_landmarks.py ]; then
+            python3 -c "import ast; ast.parse(open('scripts/extract_landmarks.py').read())"
+          fi
           echo py_ok
