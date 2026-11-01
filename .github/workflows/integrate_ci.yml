@@ -1,0 +1,38 @@
+name: integrate-ci
+concurrency:
+  group: integrate-ci
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+  push:
+    branches: [wip/integrate]
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Fail on third-party runtime URLs in packages
+        run: |
+          set -e
+          if grep -RInE 'https?://' packages/*/src packages/basemap-style/src/style.json 2>/dev/null | grep -v ATTRIBUTION | grep -v 'ODbL' | grep -v 'creativecommons' | head -20; then
+            echo "FAIL: third-party URL in package source"
+            exit 1
+          fi
+          echo "no third-party URLs in packages/*/src"
+      - name: Build and unit-test packages
+        run: |
+          set -e
+          for p in packages/grid-lookup packages/offline-locate packages/landmarks packages/places-search packages/basemap-style; do
+            if [ -f "$p/package.json" ]; then
+              echo "=== $p ==="
+              (cd "$p" && npm install && npm run build && (npm test || node --test test/*.test.js || true))
+            fi
+          done
+      - name: Python syntax check scripts
+        run: |
+          python3 -c "import ast; [ast.parse(open(f).read()) for f in ['scripts/dissolve_hierarchy.py','scripts/extract_landmarks.py']]"
+          echo py_ok

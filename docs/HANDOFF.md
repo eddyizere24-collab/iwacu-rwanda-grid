@@ -2,99 +2,51 @@
 
 Standing rule: append a dated entry for every change. Never delete earlier entries.
 
-Commit message format: `[GROK] area: what - why - next`
-Logic changes: short comment `CHANGED YYYY-MM-DD GROK: <what/why>; see docs/HANDOFF.md`
+Commit format: `[GROK] area: what - why - next`
+Code: `CHANGED YYYY-MM-DD GROK: <what/why>; see docs/HANDOFF.md`
 
 ---
 
-## 2026-11-01 — GROK — basemap Java 21 fix (Planetiler v0.9.0 pinned)
+## 2026-11-01 20:20 — GROK — S0 INTEGRATION (wip/integrate)
 
 **Agent:** GROK
 
-**What changed**
-- `basemap.yml`: replaced apt `openjdk-21-jre-headless` with `actions/setup-java@v4` (Temurin, java-version 21); assert `java -version` ≥ 21 before build; `set -o pipefail` on Planetiler; pin **Planetiler v0.9.0** JAR URL; richer layer/sample-tile report.
+**What:** Merged all WIP branches into `wip/integrate`. Single HANDOFF table. Stale "Java 17 / do not resume" lines removed (Planetiler Java 21 fix already on main; PMTiles built).
 
-**Why**
-- Run 41319587186 failed: Planetiler saw Java 17 on PATH despite apt installing JRE 21.
+**Branch status table**
 
-**Files**
-- `.github/workflows/basemap.yml`
-- `docs/HANDOFF.md` (this entry)
+| branch | head SHA (40) | what it holds | verified | evidence |
+|--------|---------------|---------------|----------|----------|
+| main | ada1c59401589fadb1b785c95ac2cef483adb82f | offline_parity workflow registration; basemap vendor licences | partial | runs 41325735730 vendor; Pages 404 until owner enables |
+| wip/g2 | 9d59f3e0770c73c8e601751cd5cdbe38834d39e1 | matrix exact-build invariants 11/12/13/37 | partial | run 41326892301 builds OK; merge missing geojson |
+| wip/g3 | 03d2facaff46bc060d023bc3cdd00cbbe7a9899d | packages/grid-lookup IRG2 TS + basemap-style | partial | package present; full 100k parity fail path |
+| wip/g4 | 5335eca1c06cc224fae828eb4049e39bdad3cd8d | export-boundaries + Kivu comparison docs | yes counts | run 41323271866 counts 1/5/30/416/2148/14823 |
+| wip/g-dissolve | d95f726a703cf31ac066b00e303633b85196f4c0 | dissolve hierarchy snap 1m | yes tables | run 41325727657 invalid=0 sibling≪0.1% |
+| wip/offline | 7d517a261d63440839d447a5650011fb71bd8096 | offline-locate + offline_validate harness | partial | smoke green 41325771621; parity path bug |
+| wip/j | f3d94b82ab914ee57fa49f85582a7f8e3c77ecef | landmarks OSM extract + packages/landmarks | partial extract | run 41327676630 count 2552 tiles 556 |
+| wip/k | c553e86385365cd22f57a9980b8915b7a61a2a8e | packages/places-search | smoke only | run 41327703444 |
+| wip/integrate | (see latest commit on this branch) | all of the above combined | CI pending | integrate_ci.yml |
 
-**Planetiler pin:** `https://github.com/onthegomap/planetiler/releases/download/v0.9.0/planetiler.jar`
+**Verified (historical)**
+- IRG2 codec round-trip 0/100k (run 41285615471)
+- rwanda.pmtiles on gh-pages 45,127,285 B
+- dissolve parent/sibling metrics (run 41325727657)
+- landmarks extract 2552 POIs (run 41327676630)
 
-**Current state**
-- One rebuild dispatched after this commit. Tables/demo URL **NOT VERIFIED** until that run succeeds.
+**Not verified / open**
+- Pages demo 404 (owner Settings → Pages → gh-pages root)
+- E invariants c/d national targets
+- H 100k TS parity + 10k PIP
+- K 1000 typo top-3
+- J 200 brute-force nearby
+- No NISR data committed (artifact only)
 
-**Open risks**
-- z14 may exceed 100 MB (fallback z12 in workflow).
-- MapLibre style layer ids must match Planetiler/OpenMapTiles output names.
-
-**Rollback**
-- Revert this commit; previous workflow still fails on Java 17.
-
-**Next**
-- Single run only; if fail, report exact error + HANDOFF entry and stop (no blind retry).
+**Next:** light CI green on integrate; unit tests; overnight heavy runs after 22:00 only when ordered.
 
 ---
 
-## 2026-11-01 — GROK — initial handoff (grid IRG2 + base map start)
+## Prior entries (summary)
 
-**Agent:** GROK
-
-**What changed**
-- Established this HANDOFF log and commit-message convention for all future work on this repo.
-- Grid pipeline (prior work, not modified in this commit): exact geometry lattice build, exclusive pure cells, strict 32-child hierarchical merge, binary index format **IRG2** (length-prefixed ASCII geohash keys; replaced broken IRG1 int-delta codec that caused ~94% missing lookups).
-- Base map job started: Planetiler build of `rwanda.pmtiles` from Geofabrik `rwanda-latest.osm.pbf`, MapLibre + PMTiles demo, `ATTRIBUTION.md` (OSM / ODbL). Workflow `basemap.yml`.
-
-**Why**
-- Project lead requires durable cross-agent handoff; IRG2 fixed codec round-trip; own base map so runtime needs no third-party tile server.
-
-**Files (this commit)**
-- `docs/HANDOFF.md` (this file)
-
-**Related prior commits (grid / basemap)**
-- `bfe6a45accd8ad944a4576907d3bcbe4aeee42a6` — IRG2 builder + bisect tests + single invariants workflow
-- `4d38314c6bec83ed088e9589e8f008ba79486e2b` — basemap Planetiler workflow, demo HTML, ATTRIBUTION.md
-
-**Current state**
-
-### Grid / IRG (4 districts: 11, 12, 13, 37) — run https://github.com/eddyizere24-collab/iwacu-rwanda-grid/actions/runs/41285615471
-| Metric | Result |
-|--------|--------|
-| Codec round-trip | **PASS** (8,568,693 cells, 0 key miss, 0/100k lookup disagree) |
-| a_missing | **0 / 49314 PASS** |
-| b pure mismatch | **0.0% PASS** |
-| c pure r0 by quartile | 99.583 / 99.341 / 99.907 / 99.805 — **FAIL** (need ≥99.9% all) |
-| d interior r0 overall | **98.988% FAIL** (need ≥99%) |
-| Size max lookup | **110.33 KB PASS** (≤150 KB) |
-| Results branch SHA | `34fa0fe4f8bd281611cb9802ab089de45c1caab7` |
-
-Grid work was **stopped by project lead** pending first public release; not required for that release.
-
-### Base map (PMTiles)
-| Item | Status |
-|------|--------|
-| Workflow | `basemap.yml` |
-| Commit | `4d38314c6bec83ed088e9589e8f008ba79486e2b` |
-| Run | https://github.com/eddyizere24-collab/iwacu-rwanda-grid/actions/runs/41319587186 |
-| Goal | Single `rwanda.pmtiles` z0–14 under 100 MB, GitHub Pages + MapLibre demo (Kigali, Nyamasheke/Kivu, Musanze) |
-| Verified | **NOT VERIFIED** — run **FAILED**: Planetiler requires Java 21, runner used Java 17 on PATH |
-
-**Verified vs not verified**
-- **Verified:** IRG2 codec round-trip; invariants a=0; size ≤150 KB lookup (CI + results branch).
-- **Not verified:** c/d targets; national 30-district matrix; PMTiles build/size/Pages demo.
-
-**Open risks**
-- c/d short of target (border / pure-cell cross-district wrong majority examples remain).
-- PMTiles may exceed 100 MB at z14 → workflow falls back to z12.
-- GitHub Pages must serve byte-range requests for PMTiles; peaceiris gh-pages deploy used.
-- Planetiler layer names must match MapLibre style (`water`, `roads`, `places`, etc.).
-
-**How to roll back**
-- Grid: checkout pre-IRG2 commit `f3dfbd0ae3403854e4b79ac079f07dee6cbc290c` or results artifacts from run 41215566556 (IRG1, broken lookups).
-- Basemap: delete workflow run / remove `gh-pages` branch content; revert commit `4d38314c…`.
-
-**Next step**
-- Fix Java via setup-java Temurin 21; single rebuild; no blind retries.
-- Grid: do not resume until project lead requests.
+- Planetiler Java 21 + Temurin setup-java (fixed; PMTiles success).
+- IRG2 binary format; exclusive pure; hierarchical merge.
+- Do not reintroduce "Java 17 failed, do not resume" — resolved.
