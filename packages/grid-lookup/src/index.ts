@@ -25,17 +25,18 @@ export type GridIndex = {
 };
 
 function gunzipSyncNode(buf: Uint8Array): Uint8Array {
-  // dynamic require for node only
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const zlib = require("node:zlib") as typeof import("node:zlib");
-  return zlib.gunzipSync(Buffer.from(buf));
+  return new Uint8Array(zlib.gunzipSync(Buffer.from(buf)));
 }
 
 async function gunzipBrowser(buf: Uint8Array): Promise<Uint8Array> {
+  // CHANGED 2026-11-01 GROK: copy into ArrayBuffer for BlobPart typing; see docs/HANDOFF.md
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
   const ds = new DecompressionStream("gzip");
-  const stream = new Blob([buf]).stream().pipeThrough(ds);
-  const ab = await new Response(stream).arrayBuffer();
-  return new Uint8Array(ab);
+  const stream = new Blob([ab]).stream().pipeThrough(ds);
+  const out = await new Response(stream).arrayBuffer();
+  return new Uint8Array(out);
 }
 
 async function gunzip(buf: Uint8Array): Promise<Uint8Array> {
@@ -82,9 +83,7 @@ export async function loadGh6FromBytes(
 }
 
 export type LocateOptions = {
-  /** Browser/Node fetch base for gh6/{prefix}.bin.gz */
   baseUrl?: string;
-  /** Node directory containing root.bin.gz and gh6/ */
   outDir?: string;
 };
 
@@ -96,7 +95,6 @@ export async function locate(
 ): Promise<LocateResult> {
   const gh9 = encode(lat, lng, 9);
   const prefix6 = gh9.slice(0, 6);
-  // lazy-load gh6 if not present
   let hasPrefix = false;
   for (const k of index.cells.keys()) {
     if (k.startsWith(prefix6) || prefix6.startsWith(k)) {
@@ -112,7 +110,7 @@ export async function locate(
         const buf = await fs.readFile(path);
         await loadGh6FromBytes(new Uint8Array(buf), index.vidOrder, index.cells);
       } catch {
-        /* missing chunk */
+        /* missing */
       }
     } else if (opts.baseUrl || index.baseUrl) {
       const base = (opts.baseUrl || index.baseUrl || "").replace(/\/$/, "");
