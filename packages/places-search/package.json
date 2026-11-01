@@ -1,0 +1,8 @@
+{
+  "name": "@iwacu/places-search",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "npm run build && node --test test/*.test.js" },
+  "devDependencies": { "typescript": "^5.7.0", "@types/node": "^22.10.0" }
+}
