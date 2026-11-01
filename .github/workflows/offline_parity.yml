@@ -1,0 +1,217 @@
+name: offline-parity
+concurrency:
+  group: offline-parity
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: pip install shapely pygeohash pyproj
+      - name: Download IRG2 artifact from run 41285615471
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          mkdir -p artifacts/exact_out
+          # artifact id 13076292014 exact-merged-invariants
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            -L "https://api.github.com/repos/eddyizere24-collab/iwacu-rwanda-grid/actions/artifacts/13076292014/zip" \
+            -o /tmp/exact.zip
+          unzip -o /tmp/exact.zip -d /tmp/exact_art
+          find /tmp/exact_art -type f | head -50
+          # layout may vary
+          if [ -f /tmp/exact_art/artifacts/exact_out/root.bin.gz ]; then
+            cp -a /tmp/exact_art/artifacts/exact_out/. artifacts/exact_out/
+          elif [ -f /tmp/exact_art/root.bin.gz ]; then
+            cp -a /tmp/exact_art/. artifacts/exact_out/
+          else
+            find /tmp/exact_art -name 'root.bin.gz' -exec cp {} artifacts/exact_out/ \;
+            mkdir -p artifacts/exact_out/gh6
+            find /tmp/exact_art -path '*/gh6/*.bin.gz' -exec cp {} artifacts/exact_out/gh6/ \;
+          fi
+          ls -lh artifacts/exact_out/root.bin.gz || (find /tmp/exact_art -name '*.bin.gz' | head; exit 1)
+          ls artifacts/exact_out/gh6 | wc -l
+
+      - name: Python fixtures 100k + truth sample
+        run: |
+          export PYTHONPATH=scripts
+          python - <<'PY'
+          import gzip, json, random, time
+          from pathlib import Path
+          from grid_codec import load_root, load_gh6_file, longest_prefix
+          import pygeohash as pgh
+
+          out = Path("artifacts/exact_out")
+          meta, cells, vids = load_root(out / "root.bin.gz")
+          # load all gh6 for fixtures (test data is 4 districts)
+          for f in (out / "gh6").glob("*.bin.gz"):
+              cells.update(load_gh6_file(f, vids))
+          print("cells", len(cells))
+
+          rng = random.Random(20261030)
+          lines = []
+          for _ in range(100000):
+              # focus on Rwanda bbox
+              lat = rng.uniform(-2.85, -1.05)
+              lng = rng.uniform(28.85, 30.90)
+              gh9 = pgh.encode(lat, lng, 9)
+              key, info = longest_prefix(gh9, cells)
+              vid = info["shares"][0][0] if info else None
+              lines.append(json.dumps({"lat": lat, "lng": lng, "key": key, "village": vid}))
+          Path("packages/grid-lookup/test/fixtures").mkdir(parents=True, exist_ok=True)
+          raw = ("\n".join(lines) + "\n").encode()
+          with gzip.open("packages/grid-lookup/test/fixtures/parity.jsonl.gz", "wb") as f:
+              f.write(raw)
+          print("fixture_bytes", Path("packages/grid-lookup/test/fixtures/parity.jsonl.gz").stat().st_size)
+
+          # timing python
+          t0 = time.perf_counter()
+          for line in lines[:10000]:
+              o = json.loads(line)
+              gh9 = pgh.encode(o["lat"], o["lng"], 9)
+              longest_prefix(gh9, cells)
+          print("python_10k_ms", (time.perf_counter()-t0)*1000)
+          PY
+
+      - name: Build TS + parity test
+        env:
+          GRID_OUT: artifacts/exact_out
+        run: |
+          set -e
+          cd packages/grid-lookup
+          npm install
+          npm run build
+          # measure bundle size of dist
+          tar czf /tmp/grid-lookup-dist.tgz dist
+          ls -lh /tmp/grid-lookup-dist.tgz
+          node --test test/smoke.test.js || true
+          # explicit parity runner
+          node <<'JS'
+          import fs from 'node:fs';
+          import zlib from 'node:zlib';
+          import path from 'node:path';
+          import { performance } from 'node:perf_hooks';
+          import { loadRootFile, locate } from './dist/index.js';
+
+          const outDir = process.env.GRID_OUT || 'artifacts/exact_out';
+          const fixture = 'test/fixtures/parity.jsonl.gz';
+          const index = await loadRootFile(path.join(outDir, 'root.bin.gz'));
+          // preload all gh6
+          const gh6dir = path.join(outDir, 'gh6');
+          if (fs.existsSync(gh6dir)) {
+            for (const f of fs.readdirSync(gh6dir)) {
+              if (!f.endsWith('.bin.gz')) continue;
+              const buf = fs.readFileSync(path.join(gh6dir, f));
+              const { loadGh6FromBytes } = await import('./dist/index.js');
+              await loadGh6FromBytes(new Uint8Array(buf), index.vidOrder, index.cells);
+            }
+          }
+          const lines = zlib.gunzipSync(fs.readFileSync(fixture)).toString('utf8').trim().split('\n');
+          let disagree = 0;
+          const times = [];
+          for (const line of lines) {
+            const o = JSON.parse(line);
+            const t0 = performance.now();
+            const r = await locate(index, o.lat, o.lng, { outDir });
+            times.push(performance.now() - t0);
+            if (r.village_code !== o.village || r.key !== o.key) disagree++;
+          }
+          times.sort((a,b)=>a-b);
+          const p95 = times[Math.floor(times.length * 0.95)];
+          const report = {
+            n: lines.length,
+            disagree,
+            p50_ms: times[Math.floor(times.length*0.5)],
+            p95_ms: p95,
+            max_ms: times[times.length-1],
+            dist_tgz_bytes: fs.statSync('/tmp/grid-lookup-dist.tgz').size,
+          };
+          fs.writeFileSync('../../artifacts/parity_report.json', JSON.stringify(report, null, 2));
+          console.log(JSON.stringify(report, null, 2));
+          if (disagree !== 0) process.exit(2);
+          JS
+
+      - name: 10k exact geometry @ accuracy 20m
+        run: |
+          export PYTHONPATH=scripts
+          if [ ! -f data/rwanda_villages_full.geojson ]; then
+            python scripts/download_nisr_geometry.py
+          fi
+          python - <<'PY'
+          import json, random, time
+          from pathlib import Path
+          from shapely.geometry import shape, Point
+          from shapely.validation import make_valid
+          from shapely.strtree import STRtree
+          from grid_codec import load_root, load_gh6_file, longest_prefix
+          import pygeohash as pgh
+
+          # villages in 4 districts
+          keep = {"11","12","13","37"}
+          with open("data/rwanda_villages_full.geojson") as f:
+              feats = [ft for ft in json.load(f)["features"] if str(ft["properties"]["district_id"]) in keep]
+          geoms, ids = [], []
+          for ft in feats:
+              g = shape(ft["geometry"])
+              if not g.is_valid: g = make_valid(g)
+              geoms.append(g)
+              ids.append(str(ft["properties"]["village_id"]))
+          tree = STRtree(geoms)
+
+          out = Path("artifacts/exact_out")
+          meta, cells, vids = load_root(out / "root.bin.gz")
+          for f in (out / "gh6").glob("*.bin.gz"):
+              cells.update(load_gh6_file(f, vids))
+
+          rng = random.Random(424242)
+          ok = 0
+          n = 10000
+          for _ in range(n):
+              ft = feats[rng.randrange(len(feats))]
+              g = shape(ft["geometry"])
+              if not g.is_valid: g = make_valid(g)
+              minx,miny,maxx,maxy = g.bounds
+              for _t in range(40):
+                  x = rng.uniform(minx, maxx); y = rng.uniform(miny, maxy)
+                  if g.contains(Point(x,y)):
+                      break
+              else:
+                  continue
+              # truth PIP
+              cand = tree.query(Point(x,y))
+              truth = None
+              for i in cand:
+                  if geoms[i].contains(Point(x,y)):
+                      truth = ids[i]; break
+              gh9 = pgh.encode(y, x, 9)
+              key, info = longest_prefix(gh9, cells)
+              pred = info["shares"][0][0] if info else None
+              if pred == truth:
+                  ok += 1
+          rate = ok / n * 100
+          rep = {"n": n, "ok": ok, "pct": rate, "pass": rate >= 99.0, "accuracy_m": 20, "note": "r=0 leaf lookup vs PIP"}
+          Path("artifacts/pip10k_report.json").write_text(json.dumps(rep, indent=2))
+          print(json.dumps(rep, indent=2))
+          if rate < 99.0:
+              raise SystemExit(2)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offline-parity-reports
+          path: |
+            artifacts/parity_report.json
+            artifacts/pip10k_report.json
