@@ -1,0 +1,19 @@
+name: grid-lookup-ts
+concurrency:
+  group: grid-lookup-ts
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+  push:
+    branches: [wip/g3]
+    paths: ["packages/grid-lookup/**", ".github/workflows/grid_lookup_ts.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - working-directory: packages/grid-lookup
+        run: npm install && npm run build && npm test
