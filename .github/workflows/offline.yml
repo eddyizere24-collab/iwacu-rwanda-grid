@@ -1,0 +1,21 @@
+name: offline-locate
+concurrency:
+  group: offline-locate
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+  push:
+    branches: [wip/offline]
+    paths: ["packages/offline-locate/**", "packages/grid-lookup/**", ".github/workflows/offline.yml"]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build grid-lookup then offline-locate
+        run: |
+          cd packages/grid-lookup && npm install && npm run build
+          cd ../offline-locate && npm install && npm test
