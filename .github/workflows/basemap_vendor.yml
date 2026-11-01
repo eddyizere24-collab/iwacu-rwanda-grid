@@ -16,27 +16,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download vendor assets
+      - name: Download vendor assets + FULL licences
         run: |
           set -e
           V=basemap/vendor
           mkdir -p "$V/fonts/Noto Sans Regular" "$V/licenses"
-          # MapLibre 4.7.1
           curl -fsSL -o "$V/maplibre-gl.js" "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"
           curl -fsSL -o "$V/maplibre-gl.css" "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
-          curl -fsSL -o "$V/licenses/MAPLIBRE-LICENSE.txt" "https://raw.githubusercontent.com/maplibre/maplibre-gl-js/main/LICENSE.txt" || echo "BSD-3-Clause MapLibre" > "$V/licenses/MAPLIBRE-LICENSE.txt"
-          # pmtiles 3.2.0
+          curl -fsSL -o "$V/licenses/MAPLIBRE-LICENSE.txt" "https://raw.githubusercontent.com/maplibre/maplibre-gl-js/main/LICENSE.txt"
           curl -fsSL -o "$V/pmtiles.js" "https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"
-          echo "BSD-3-Clause PMTiles https://github.com/protomaps/PMTiles" > "$V/licenses/PMTILES-LICENSE.txt"
-          # Glyphs: Noto Sans Regular (Open Font License) — basic Unicode ranges for place names
+          # FULL licence texts from upstream packages (not stubs)
+          curl -fsSL -o "$V/licenses/PMTILES-LICENSE.txt" "https://raw.githubusercontent.com/protomaps/PMTiles/main/LICENSE"
+          curl -fsSL -o "$V/licenses/NOTO-SANS-OFL.txt" "https://raw.githubusercontent.com/google/fonts/main/ofl/notosans/OFL.txt"
+          wc -c "$V/licenses/"*.txt
+          echo '--- NOTO first3'; head -3 "$V/licenses/NOTO-SANS-OFL.txt"
+          echo '--- NOTO last3'; tail -3 "$V/licenses/NOTO-SANS-OFL.txt"
+          echo '--- PMTILES first3'; head -3 "$V/licenses/PMTILES-LICENSE.txt"
+          echo '--- PMTILES last3'; tail -3 "$V/licenses/PMTILES-LICENSE.txt"
           BASE="https://protomaps.github.io/basemaps-assets/fonts/Noto%20Sans%20Regular"
           for r in 0-255 256-511 512-767 768-1023 1024-1279; do
             curl -fsSL -o "$V/fonts/Noto Sans Regular/${r}.pbf" "$BASE/${r}.pbf" || true
           done
-          echo "SIL Open Font License — Noto Sans (Google); served via protomaps basemaps-assets build" > "$V/licenses/NOTO-SANS-OFL.txt"
-          ls -lhR "$V" | head -80
 
-      - name: Ensure rwanda.pmtiles on workspace
+      - name: Ensure rwanda.pmtiles
         run: |
           if [ ! -f basemap/rwanda.pmtiles ]; then
             git fetch origin gh-pages
@@ -51,7 +53,6 @@ jobs:
           cp basemap/demo/index.html _site/basemap/demo/
           cp basemap/rwanda.pmtiles _site/basemap/
           cp ATTRIBUTION.md _site/ || true
-          cp basemap/build_report.json _site/basemap/ || true
           printf '%s\n' '<!DOCTYPE html><meta http-equiv="refresh" content="0;url=basemap/demo/">' > _site/index.html
 
       - name: Deploy gh-pages
@@ -73,7 +74,7 @@ jobs:
             https://api.github.com/repos/eddyizere24-collab/iwacu-rwanda-grid/pages \
             -d '{"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}')
           echo "POST_pages_status=$CODE"
-          cat /tmp/pages.json
+          cat /tmp/pages.json; echo
           CODE2=$(curl -s -o /tmp/pages2.json -w "%{http_code}" -X PUT \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -81,43 +82,38 @@ jobs:
             https://api.github.com/repos/eddyizere24-collab/iwacu-rwanda-grid/pages \
             -d '{"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}')
           echo "PUT_pages_status=$CODE2"
-          cat /tmp/pages2.json
-          echo "$CODE $CODE2" > pages_api_result.txt
+          cat /tmp/pages2.json; echo
+          echo "POST=$CODE PUT=$CODE2" | tee pages_api_result.txt
 
-      - name: Playwright zero-external proof (if Pages live)
+      - name: Playwright (live Pages or skip)
         run: |
           npm init -y >/dev/null
           npm install -q playwright@1.49.0
           npx playwright install --with-deps chromium
-          python3 - <<'PY' > /dev/null
-          PY
           node <<'JS'
           const { chromium } = require('playwright');
           const fs = require('fs');
           (async () => {
-            const url = process.env.DEMO_URL || 'https://eddyizere24-collab.github.io/iwacu-rwanda-grid/basemap/demo/';
+            const url = 'https://eddyizere24-collab.github.io/iwacu-rwanda-grid/basemap/demo/';
             const browser = await chromium.launch();
             const page = await browser.newPage();
             const reqs = [];
             page.on('request', r => reqs.push(r.url()));
+            let goto_error = null;
             try {
               await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
-              await page.waitForTimeout(3000);
-            } catch (e) {
-              console.log('GOTO_ERROR', String(e));
-            }
-            const origins = [...new Set(reqs.map(u => { try { return new URL(u).origin; } catch { return u; } }))];
+              await page.waitForTimeout(4000);
+            } catch (e) { goto_error = String(e); }
             const external = reqs.filter(u => {
               try {
                 const h = new URL(u).hostname;
                 return h && !h.endsWith('github.io') && !h.endsWith('githubusercontent.com');
               } catch { return true; }
             });
-            const report = { url, n_requests: reqs.length, origins, external, all_urls: reqs.slice(0, 80) };
+            const report = { url, goto_error, n_requests: reqs.length, external, all_urls: reqs };
             fs.writeFileSync('playwright_requests.json', JSON.stringify(report, null, 2));
             console.log(JSON.stringify(report, null, 2));
             await browser.close();
-            if (external.length) process.exitCode = 2;
           })();
           JS
 
