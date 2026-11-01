@@ -1,0 +1,31 @@
+name: dissolve-hierarchy
+concurrency:
+  group: dissolve-hierarchy
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+  push:
+    branches: [wip/g-dissolve]
+    paths: ["scripts/dissolve_hierarchy.py", ".github/workflows/dissolve.yml"]
+jobs:
+  dissolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely pyproj
+      - name: Ensure villages geojson
+        run: |
+          if [ ! -f data/rwanda_villages_full.geojson ]; then
+            python scripts/download_nisr_geometry.py
+          fi
+      - run: python scripts/dissolve_hierarchy.py --out artifacts/dissolved
+      - run: cat artifacts/dissolved/manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dissolved-polygons
+          path: artifacts/dissolved/
+          retention-days: 14
