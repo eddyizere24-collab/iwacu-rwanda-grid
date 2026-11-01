@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""Exact lattice + hierarchical pure-merge (strict: all 32 children exist, pure, same village).
-
-Absent children (water/outside) block merge — parent stays unmerged at child level.
-Never drop mixed leaves. Binary root (<=gh5 pure) + gh6 refined files.
-"""
+"""Exact lattice + hierarchical pure-merge. Binary IRG2 (string keys)."""
 from __future__ import annotations
-import argparse, json, gzip, hashlib, collections, math, struct
+import argparse, json, gzip, collections, math, struct, sys
 from pathlib import Path
 from datetime import datetime, timezone
-from shapely.geometry import shape, box, Point
+from shapely.geometry import shape, box
 from shapely.ops import transform
 from shapely.validation import make_valid
 from shapely.prepared import prep
 import pygeohash as pgh
 from pyproj import Transformer
 
-VERSION = "2026.10.31.hier2"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from grid_codec import write_binary_chunk
+
+VERSION = "2026.11.01.irg2"
 TO_UTM = Transformer.from_crs("EPSG:4326", "EPSG:32736", always_xy=True)
 BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
 
@@ -97,9 +96,6 @@ def refine_mixed(gh, village_geoms, village_ids, precision_next):
     return result
 
 def hierarchical_merge(store: dict):
-    """Merge only if ALL 32 BASE32 children exist in store, each pure, same village.
-    Absent children (water/outside) block merge. Never delete mixed leaves.
-    """
     for prec in (9, 8, 7, 6, 5):
         parents = collections.defaultdict(list)
         for gh in list(store.keys()):
@@ -109,7 +105,6 @@ def hierarchical_merge(store: dict):
         for parent, kids in parents.items():
             if len(parent) < 4:
                 continue
-            # strict: need every BASE32 suffix present
             expected = {parent + c for c in BASE32}
             if set(kids) != expected:
                 continue
@@ -182,44 +177,6 @@ def build_district(feats):
     store = hierarchical_merge(leaves)
     return store, {m["id"]: m for m in vmeta}
 
-def _uvarint(n: int) -> bytes:
-    out = bytearray()
-    while n > 0x7F:
-        out.append((n & 0x7F) | 0x80)
-        n >>= 7
-    out.append(n & 0x7F)
-    return bytes(out)
-
-def _gh_to_int(gh: str) -> int:
-    n = 0
-    for c in gh:
-        n = n * 32 + BASE32.index(c)
-    return n
-
-def write_binary_chunk(cells: dict, village_index: dict[str, int]) -> bytes:
-    items = sorted(cells.items(), key=lambda x: x[0])
-    buf = bytearray()
-    buf += b"IRG1"
-    buf += _uvarint(len(items))
-    prev = 0
-    for gh, info in items:
-        cur = _gh_to_int(gh)
-        buf += _uvarint(cur - prev)
-        prev = cur
-        buf += bytes([len(gh)])
-        if info["pure"]:
-            buf += b"\x01"
-            buf += _uvarint(village_index[info["shares"][0][0]])
-        else:
-            buf += b"\x00"
-            shares = info["shares"][:5]
-            buf += bytes([len(shares)])
-            for vid, s in shares:
-                buf += _uvarint(village_index[vid])
-                q = max(0, min(65535, int(round(s * 65535))))
-                buf += struct.pack(">H", q)
-    return bytes(buf)
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--geojson", default="data/rwanda_villages_full.geojson")
@@ -260,6 +217,7 @@ def main():
         "villages": {v: all_meta[v] for v in vids if v in all_meta},
         "vid_order": vids,
         "merge_rule": "all_32_children_exist_pure_same_village",
+        "format": "IRG2",
     }
     root_bin = write_binary_chunk(root_cells, village_index)
     root_json = json.dumps(root_payload, separators=(",", ":")).encode()
@@ -282,7 +240,7 @@ def main():
         "crs_area": "EPSG:32736",
         "pure_rule": "exclusive_single_village",
         "merge": "all_32_children_exist_pure_same_village_up_to_gh4",
-        "format": "binary_delta_varint_gz",
+        "format": "IRG2_string_keys_gz",
         "village_total": len(all_meta),
         "cells_total": len(all_cells),
         "pure_cells": sum(1 for c in all_cells.values() if c["pure"]),
@@ -294,7 +252,7 @@ def main():
     }
     json.dump(man, open(out / "manifest.json", "w"), indent=2)
     print(json.dumps(man, indent=2))
-    print("DONE hier2 strict merge")
+    print("DONE IRG2")
 
 if __name__ == "__main__":
     main()
