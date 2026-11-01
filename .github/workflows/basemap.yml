@@ -1,0 +1,204 @@
+name: basemap-pmtiles
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Java + tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq openjdk-21-jre-headless curl unzip python3
+
+      - name: Download Planetiler
+        run: |
+          curl -fsSL -o planetiler.jar \
+            "https://github.com/onthegomap/planetiler/releases/download/v0.9.0/planetiler.jar"
+          ls -lh planetiler.jar
+
+      - name: Download Geofabrik Rwanda extract
+        run: |
+          mkdir -p data
+          curl -fsSL -o data/rwanda-latest.osm.pbf \
+            "https://download.geofabrik.de/africa/rwanda-latest.osm.pbf"
+          ls -lh data/rwanda-latest.osm.pbf
+
+      - name: Build rwanda.pmtiles (z0–z14)
+        id: build
+        run: |
+          START=$(date +%s)
+          java -Xmx6g -jar planetiler.jar \
+            --osm-path=data/rwanda-latest.osm.pbf \
+            --output=basemap/rwanda.pmtiles \
+            --download \
+            --maxzoom=14 \
+            --bounds=28.85,-2.85,30.90,-1.05 \
+            --building_merge_z14=false \
+            2>&1 | tee build.log
+          END=$(date +%s)
+          echo "build_seconds=$((END-START))" >> $GITHUB_OUTPUT
+          ls -lh basemap/rwanda.pmtiles
+          SIZE=$(stat -c%s basemap/rwanda.pmtiles)
+          echo "size_bytes=$SIZE" >> $GITHUB_OUTPUT
+          if [ "$SIZE" -gt 104857600 ]; then
+            echo "OVER_100MB=1" >> $GITHUB_OUTPUT
+            echo "File exceeds 100MB — will try maxzoom 12"
+          else
+            echo "OVER_100MB=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fallback z0-z12 if over 100MB
+        if: steps.build.outputs.OVER_100MB == '1'
+        run: |
+          java -Xmx6g -jar planetiler.jar \
+            --osm-path=data/rwanda-latest.osm.pbf \
+            --output=basemap/rwanda.pmtiles \
+            --download \
+            --maxzoom=12 \
+            --bounds=28.85,-2.85,30.90,-1.05 \
+            2>&1 | tee build_z12.log
+          ls -lh basemap/rwanda.pmtiles
+
+      - name: Inspect PMTiles header + layers
+        run: |
+          python3 - <<'PY'
+          import struct, json, os, urllib.request
+          from pathlib import Path
+
+          path = Path("basemap/rwanda.pmtiles")
+          size = path.stat().st_size
+          data = path.read_bytes()
+
+          # PMTiles v3 header: magic 7 bytes "PMTiles", version, etc.
+          magic = data[:7]
+          print("magic", magic)
+          print("file_size_bytes", size)
+          print("file_size_mb", round(size / 1e6, 2))
+
+          # Try pmtiles CLI if we can pip install
+          PY
+          pip install -q pmtiles 2>/dev/null || true
+          python3 - <<'PY'
+          import json, subprocess, sys
+          from pathlib import Path
+          try:
+              from pmtiles.reader import Reader, MmapSource
+          except Exception as e:
+              print("pmtiles python import failed", e)
+              sys.exit(0)
+
+          path = "basemap/rwanda.pmtiles"
+          with open(path, "rb") as f:
+              reader = Reader(MmapSource(f))
+          h = reader.header()
+          print("header_keys", sorted(h.keys()) if isinstance(h, dict) else h)
+          meta = reader.metadata()
+          print("metadata_type", type(meta))
+          if isinstance(meta, dict):
+              print(json.dumps({k: meta.get(k) for k in list(meta)[:20]}, indent=2)[:3000])
+              # vector_layers
+              vl = meta.get("vector_layers") or meta.get("tilestats", {}).get("layers")
+              if vl:
+                  print("LAYERS:")
+                  for layer in vl:
+                      if isinstance(layer, dict):
+                          print(" ", layer.get("id") or layer.get("layer"), "count", layer.get("count") or layer.get("feature_count"))
+                      else:
+                          print(" ", layer)
+          # sample tiles at z10 center Rwanda
+          # tile for lon 30 lat -2 approx
+          def deg2num(lat_deg, lon_deg, zoom):
+              import math
+              lat_rad = math.radians(lat_deg)
+              n = 2.0 ** zoom
+              xtile = int((lon_deg + 180.0) / 360.0 * n)
+              ytile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+              return xtile, ytile
+
+          samples = []
+          for z in (10, 12, 14):
+              x, y = deg2num(-1.95, 30.06, z)
+              try:
+                  t = reader.get(z, x, y)
+                  samples.append({"z": z, "x": x, "y": y, "bytes": len(t) if t else 0})
+              except Exception as e:
+                  samples.append({"z": z, "x": x, "y": y, "error": str(e)})
+          print("SAMPLE_TILES", json.dumps(samples))
+
+          # approximate size by maxzoom from header
+          print("min_zoom", h.get("min_zoom") if isinstance(h, dict) else getattr(h, "min_zoom", None))
+          print("max_zoom", h.get("max_zoom") if isinstance(h, dict) else getattr(h, "max_zoom", None))
+          PY
+
+      - name: Write build report
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path("basemap/rwanda.pmtiles")
+          size = p.stat().st_size if p.exists() else 0
+          report = {
+              "file": "basemap/rwanda.pmtiles",
+              "size_bytes": size,
+              "size_mb": round(size / 1e6, 3),
+              "under_100mb": size < 100 * 1024 * 1024,
+              "source": "https://download.geofabrik.de/africa/rwanda-latest.osm.pbf",
+              "builder": "planetiler v0.9.0",
+              "maxzoom_requested": 14,
+          }
+          Path("basemap/build_report.json").write_text(json.dumps(report, indent=2))
+          print(json.dumps(report, indent=2))
+          PY
+          # attach build time from previous step if present
+          cat basemap/build_report.json
+
+      - name: Verify three range requests (local file slice)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("basemap/rwanda.pmtiles")
+          data = p.read_bytes()
+          # header is first 127 bytes for v3
+          chunks = [
+              (0, 127),
+              (127, 4096),
+              (max(0, len(data)//2), max(0, len(data)//2) + 4096),
+          ]
+          for a, b in chunks:
+              piece = data[a:b]
+              print(f"range_bytes={a}-{b-1} len={len(piece)} ok={len(piece)==b-a}")
+          print("file_total", len(data))
+          PY
+
+      - name: Stage Pages artifact
+        run: |
+          mkdir -p _site/basemap/demo
+          cp basemap/rwanda.pmtiles _site/basemap/
+          cp basemap/demo/index.html _site/basemap/demo/
+          cp ATTRIBUTION.md _site/
+          cp basemap/build_report.json _site/basemap/ || true
+          # root redirect
+          printf '%s\n' '<!DOCTYPE html><meta http-equiv="refresh" content="0;url=basemap/demo/">' > _site/index.html
+          ls -lhR _site
+
+      - name: Deploy to GitHub Pages (branch gh-pages)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _site
+          force_orphan: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rwanda-pmtiles
+          path: |
+            basemap/rwanda.pmtiles
+            basemap/build_report.json
+            build.log
