@@ -1,0 +1,31 @@
+name: landmarks-build
+concurrency:
+  group: landmarks-build
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+  push:
+    branches: [wip/j]
+    paths: ["scripts/extract_landmarks.py", "packages/landmarks/**", ".github/workflows/landmarks.yml"]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: pip install osmium pygeohash
+      - name: Download Geofabrik extract
+        run: |
+          mkdir -p data
+          curl -fsSL -o data/rwanda-latest.osm.pbf https://download.geofabrik.de/africa/rwanda-latest.osm.pbf
+          ls -lh data/rwanda-latest.osm.pbf
+      - run: python scripts/extract_landmarks.py --out artifacts/landmarks
+      - run: cd packages/landmarks && npm install && npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: landmarks-index
+          path: artifacts/landmarks/
