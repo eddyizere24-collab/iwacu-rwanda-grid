@@ -12,12 +12,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Java + tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq openjdk-21-jre-headless curl unzip python3
+      # CHANGED 2026-11-01 GROK: Temurin 21 required by Planetiler v0.9.0; apt JRE left java 17 on PATH; see docs/HANDOFF.md
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
 
-      - name: Download Planetiler
+      - name: Assert Java >= 21
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          VER=$(java -version 2>&1 | head -1)
+          echo "version_line=$VER"
+          java -version 2>&1 | head -1 | grep -E 'version "(2[1-9]|[3-9][0-9])' \
+            || { echo "ERROR: Java below 21"; exit 1; }
+
+      - name: Download Planetiler v0.9.0 (pinned)
         run: |
           curl -fsSL -o planetiler.jar \
             "https://github.com/onthegomap/planetiler/releases/download/v0.9.0/planetiler.jar"
@@ -25,7 +36,7 @@ jobs:
 
       - name: Download Geofabrik Rwanda extract
         run: |
-          mkdir -p data
+          mkdir -p data basemap
           curl -fsSL -o data/rwanda-latest.osm.pbf \
             "https://download.geofabrik.de/africa/rwanda-latest.osm.pbf"
           ls -lh data/rwanda-latest.osm.pbf
@@ -33,6 +44,7 @@ jobs:
       - name: Build rwanda.pmtiles (z0–z14)
         id: build
         run: |
+          set -o pipefail
           START=$(date +%s)
           java -Xmx6g -jar planetiler.jar \
             --osm-path=data/rwanda-latest.osm.pbf \
@@ -44,6 +56,7 @@ jobs:
             2>&1 | tee build.log
           END=$(date +%s)
           echo "build_seconds=$((END-START))" >> $GITHUB_OUTPUT
+          echo "Build time seconds: $((END-START))"
           ls -lh basemap/rwanda.pmtiles
           SIZE=$(stat -c%s basemap/rwanda.pmtiles)
           echo "size_bytes=$SIZE" >> $GITHUB_OUTPUT
@@ -57,6 +70,7 @@ jobs:
       - name: Fallback z0-z12 if over 100MB
         if: steps.build.outputs.OVER_100MB == '1'
         run: |
+          set -o pipefail
           java -Xmx6g -jar planetiler.jar \
             --osm-path=data/rwanda-latest.osm.pbf \
             --output=basemap/rwanda.pmtiles \
@@ -66,56 +80,38 @@ jobs:
             2>&1 | tee build_z12.log
           ls -lh basemap/rwanda.pmtiles
 
-      - name: Inspect PMTiles header + layers
+      - name: Inspect PMTiles header + layers + sample tiles
         run: |
+          pip install -q pmtiles
           python3 - <<'PY'
-          import struct, json, os, urllib.request
+          import json, math
           from pathlib import Path
-
-          path = Path("basemap/rwanda.pmtiles")
-          size = path.stat().st_size
-          data = path.read_bytes()
-
-          # PMTiles v3 header: magic 7 bytes "PMTiles", version, etc.
-          magic = data[:7]
-          print("magic", magic)
-          print("file_size_bytes", size)
-          print("file_size_mb", round(size / 1e6, 2))
-
-          # Try pmtiles CLI if we can pip install
-          PY
-          pip install -q pmtiles 2>/dev/null || true
-          python3 - <<'PY'
-          import json, subprocess, sys
-          from pathlib import Path
-          try:
-              from pmtiles.reader import Reader, MmapSource
-          except Exception as e:
-              print("pmtiles python import failed", e)
-              sys.exit(0)
+          from pmtiles.reader import Reader, MmapSource
 
           path = "basemap/rwanda.pmtiles"
+          size = Path(path).stat().st_size
+          print("file_size_bytes", size)
+          print("file_size_mb", round(size / 1e6, 3))
           with open(path, "rb") as f:
               reader = Reader(MmapSource(f))
           h = reader.header()
-          print("header_keys", sorted(h.keys()) if isinstance(h, dict) else h)
+          print("header", {k: h.get(k) for k in h} if isinstance(h, dict) else h)
           meta = reader.metadata()
-          print("metadata_type", type(meta))
+          Path("basemap/pmtiles_metadata.json").write_text(json.dumps(meta, indent=2) if isinstance(meta, dict) else str(meta))
           if isinstance(meta, dict):
-              print(json.dumps({k: meta.get(k) for k in list(meta)[:20]}, indent=2)[:3000])
-              # vector_layers
-              vl = meta.get("vector_layers") or meta.get("tilestats", {}).get("layers")
-              if vl:
-                  print("LAYERS:")
-                  for layer in vl:
-                      if isinstance(layer, dict):
-                          print(" ", layer.get("id") or layer.get("layer"), "count", layer.get("count") or layer.get("feature_count"))
-                      else:
-                          print(" ", layer)
-          # sample tiles at z10 center Rwanda
-          # tile for lon 30 lat -2 approx
+              vl = meta.get("vector_layers") or []
+              print("LAYER_LIST")
+              for layer in vl:
+                  if isinstance(layer, dict):
+                      print(" ", layer.get("id"), "fields", list((layer.get("fields") or {}).keys())[:8])
+              ts = meta.get("tilestats") or {}
+              layers = ts.get("layers") or []
+              print("FEATURE_COUNTS")
+              for layer in layers:
+                  if isinstance(layer, dict):
+                      print(" ", layer.get("layer"), "count", layer.get("count"))
+
           def deg2num(lat_deg, lon_deg, zoom):
-              import math
               lat_rad = math.radians(lat_deg)
               n = 2.0 ** zoom
               xtile = int((lon_deg + 180.0) / 360.0 * n)
@@ -131,49 +127,43 @@ jobs:
               except Exception as e:
                   samples.append({"z": z, "x": x, "y": y, "error": str(e)})
           print("SAMPLE_TILES", json.dumps(samples))
-
-          # approximate size by maxzoom from header
-          print("min_zoom", h.get("min_zoom") if isinstance(h, dict) else getattr(h, "min_zoom", None))
-          print("max_zoom", h.get("max_zoom") if isinstance(h, dict) else getattr(h, "max_zoom", None))
+          Path("basemap/sample_tiles.json").write_text(json.dumps(samples, indent=2))
           PY
 
       - name: Write build report
         run: |
           python3 - <<'PY'
-          import json, os
+          import json
           from pathlib import Path
           p = Path("basemap/rwanda.pmtiles")
           size = p.stat().st_size if p.exists() else 0
+          samples = json.loads(Path("basemap/sample_tiles.json").read_text()) if Path("basemap/sample_tiles.json").exists() else []
           report = {
               "file": "basemap/rwanda.pmtiles",
               "size_bytes": size,
               "size_mb": round(size / 1e6, 3),
               "under_100mb": size < 100 * 1024 * 1024,
               "source": "https://download.geofabrik.de/africa/rwanda-latest.osm.pbf",
-              "builder": "planetiler v0.9.0",
+              "builder": "planetiler v0.9.0 (pinned)",
+              "java": "temurin 21",
               "maxzoom_requested": 14,
+              "sample_tiles_kigali": samples,
           }
           Path("basemap/build_report.json").write_text(json.dumps(report, indent=2))
           print(json.dumps(report, indent=2))
           PY
-          # attach build time from previous step if present
-          cat basemap/build_report.json
 
-      - name: Verify three range requests (local file slice)
+      - name: Verify local range slices (pmtiles-style)
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path("basemap/rwanda.pmtiles")
           data = p.read_bytes()
-          # header is first 127 bytes for v3
-          chunks = [
-              (0, 127),
-              (127, 4096),
-              (max(0, len(data)//2), max(0, len(data)//2) + 4096),
-          ]
-          for a, b in chunks:
-              piece = data[a:b]
-              print(f"range_bytes={a}-{b-1} len={len(piece)} ok={len(piece)==b-a}")
+          assert data[:7] == b"PMTiles", data[:7]
+          print("magic_ok PMTiles")
+          for a, b in [(0, 127), (127, 4096), (len(data)//2, len(data)//2 + 4096)]:
+              piece = data[a:min(b, len(data))]
+              print(f"range_bytes={a}-{min(b, len(data))-1} len={len(piece)}")
           print("file_total", len(data))
           PY
 
@@ -184,7 +174,6 @@ jobs:
           cp basemap/demo/index.html _site/basemap/demo/
           cp ATTRIBUTION.md _site/
           cp basemap/build_report.json _site/basemap/ || true
-          # root redirect
           printf '%s\n' '<!DOCTYPE html><meta http-equiv="refresh" content="0;url=basemap/demo/">' > _site/index.html
           ls -lhR _site
 
@@ -201,4 +190,6 @@ jobs:
           path: |
             basemap/rwanda.pmtiles
             basemap/build_report.json
+            basemap/sample_tiles.json
+            basemap/pmtiles_metadata.json
             build.log

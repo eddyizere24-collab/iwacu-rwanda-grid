@@ -7,6 +7,37 @@ Logic changes: short comment `CHANGED YYYY-MM-DD GROK: <what/why>; see docs/HAND
 
 ---
 
+## 2026-11-01 — GROK — basemap Java 21 fix (Planetiler v0.9.0 pinned)
+
+**Agent:** GROK
+
+**What changed**
+- `basemap.yml`: replaced apt `openjdk-21-jre-headless` with `actions/setup-java@v4` (Temurin, java-version 21); assert `java -version` ≥ 21 before build; `set -o pipefail` on Planetiler; pin **Planetiler v0.9.0** JAR URL; richer layer/sample-tile report.
+
+**Why**
+- Run 41319587186 failed: Planetiler saw Java 17 on PATH despite apt installing JRE 21.
+
+**Files**
+- `.github/workflows/basemap.yml`
+- `docs/HANDOFF.md` (this entry)
+
+**Planetiler pin:** `https://github.com/onthegomap/planetiler/releases/download/v0.9.0/planetiler.jar`
+
+**Current state**
+- One rebuild dispatched after this commit. Tables/demo URL **NOT VERIFIED** until that run succeeds.
+
+**Open risks**
+- z14 may exceed 100 MB (fallback z12 in workflow).
+- MapLibre style layer ids must match Planetiler/OpenMapTiles output names.
+
+**Rollback**
+- Revert this commit; previous workflow still fails on Java 17.
+
+**Next**
+- Single run only; if fail, report exact error + HANDOFF entry and stop (no blind retry).
+
+---
+
 ## 2026-11-01 — GROK — initial handoff (grid IRG2 + base map start)
 
 **Agent:** GROK
@@ -48,7 +79,7 @@ Grid work was **stopped by project lead** pending first public release; not requ
 | Commit | `4d38314c6bec83ed088e9589e8f008ba79486e2b` |
 | Run | https://github.com/eddyizere24-collab/iwacu-rwanda-grid/actions/runs/41319587186 |
 | Goal | Single `rwanda.pmtiles` z0–14 under 100 MB, GitHub Pages + MapLibre demo (Kigali, Nyamasheke/Kivu, Musanze) |
-| Verified | **NOT VERIFIED** until run completes (size, layers, range requests, live URL) |
+| Verified | **NOT VERIFIED** — run **FAILED**: Planetiler requires Java 21, runner used Java 17 on PATH |
 
 **Verified vs not verified**
 - **Verified:** IRG2 codec round-trip; invariants a=0; size ≤150 KB lookup (CI + results branch).
@@ -65,5 +96,5 @@ Grid work was **stopped by project lead** pending first public release; not requ
 - Basemap: delete workflow run / remove `gh-pages` branch content; revert commit `4d38314c…`.
 
 **Next step**
-- Wait for basemap run 41319587186; report size, layers, feature counts, build time, demo URL; no further pushes while that run is active.
+- Fix Java via setup-java Temurin 21; single rebuild; no blind retries.
 - Grid: do not resume until project lead requests.
