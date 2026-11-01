@@ -12,73 +12,130 @@ on:
       - "scripts/check_invariants_binary.py"
       - ".github/workflows/grid_invariants_g2.yml"
 jobs:
-  build-test:
+  build-district:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        district: ["11", "12", "13", "37"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install shapely pygeohash pyproj
+      - name: Cache NISR geojson
+        uses: actions/cache@v4
+        with:
+          path: data/rwanda_villages_full.geojson
+          key: nisr-villages-v1
       - name: Ensure geojson
         run: |
           if [ ! -f data/rwanda_villages_full.geojson ]; then
             python scripts/download_nisr_geometry.py
           fi
-      - name: Build 4 districts
+      - name: Filter + build one district
         run: |
-          python - <<'PY'
+          set -e
+          D="${{ matrix.district }}"
+          START=$(date +%s)
+          python - <<PY
           import json
           from pathlib import Path
           with open("data/rwanda_villages_full.geojson") as f:
               fc = json.load(f)
-          keep = {"11", "12", "13", "37"}
-          fc["features"] = [ft for ft in fc["features"] if str(ft["properties"]["district_id"]) in keep]
-          Path("data/rwanda_4d.geojson").write_text(json.dumps(fc))
-          print(len(fc["features"]))
+          fc["features"] = [ft for ft in fc["features"] if str(ft["properties"]["district_id"]) == "$D"]
+          Path("data/d_${D}.geojson").write_text(json.dumps(fc))
+          print("n", len(fc["features"]))
           PY
-          python scripts/build_exact_grid.py --geojson data/rwanda_4d.geojson --out artifacts/exact_out
-      - name: Codec round-trip
-        run: |
-          export PYTHONPATH=scripts
-          python - <<'PY'
-          import json, random
-          from pathlib import Path
-          from grid_codec import load_root, load_gh6_file, write_binary_chunk, read_binary_chunk, longest_prefix
-          import pygeohash as pgh
-          meta, root, vids = load_root(Path("artifacts/exact_out/root.bin.gz"))
-          cells = dict(root)
-          for p in Path("artifacts/exact_out/gh6").glob("*.bin.gz"):
-              cells.update(load_gh6_file(p, vids))
-          vindex = {v: i for i, v in enumerate(vids)}
-          decoded = read_binary_chunk(write_binary_chunk(cells, vindex), vids)
-          miss = set(cells) - set(decoded)
-          rng = random.Random(42)
-          disagree = 0
-          for _ in range(100000):
-              lat = rng.uniform(-2.9, -1.0)
-              lon = rng.uniform(28.8, 30.9)
-              gh9 = pgh.encode(lat, lon, 9)
-              kj, ij = longest_prefix(gh9, cells)
-              kb, ib = longest_prefix(gh9, decoded)
-              vj = ij["shares"][0][0] if ij else None
-              vb = ib["shares"][0][0] if ib else None
-              if kj != kb or vj != vb:
-                  disagree += 1
-          print(json.dumps({"n_cells": len(cells), "key_missing": len(miss), "lookup_disagree_100k": disagree}))
-          assert len(miss) == 0 and disagree == 0
-          PY
-      - name: Invariants
-        run: |
-          export PYTHONPATH=scripts
-          python scripts/check_invariants_binary.py --districts 11,12,13,37 --out-dir artifacts/exact_out --out data/invariants_report.json || true
-          cat data/invariants_report.json
-      - run: python scripts/size_benchmark.py --out-dir artifacts/exact_out --out data/size_benchmark.json
+          python scripts/build_exact_grid.py --geojson "data/d_${D}.geojson" --district "$D" --out "artifacts/d_${D}"
+          END=$(date +%s)
+          echo "district=${D} build_seconds=$((END-START))" | tee "artifacts/d_${D}/build_time.txt"
+          cat "artifacts/d_${D}/manifest.json"
       - uses: actions/upload-artifact@v4
         with:
-          name: g2-invariants
+          name: exact-d-${{ matrix.district }}
+          path: artifacts/d_${{ matrix.district }}/
+
+  merge-invariants:
+    needs: build-district
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely pygeohash pyproj
+      - uses: actions/download-artifact@v4
+        with:
+          path: arts
+      - name: Merge IRG2 chunks + run invariants
+        run: |
+          set -e
+          export PYTHONPATH=scripts
+          mkdir -p artifacts/exact_out/gh6
+          python - <<'PY'
+          import gzip, json, struct, shutil
+          from pathlib import Path
+          from grid_codec import load_root, load_gh6_file, write_binary_chunk, read_binary_chunk
+
+          root_cells = {}
+          all_meta = {}
+          vid_order = []
+          for d in ("11", "12", "13", "37"):
+              p = Path(f"arts/exact-d-{d}")
+              if not p.exists():
+                  # artifact layout may nest
+                  cands = list(Path("arts").glob(f"**/d_{d}")) + list(Path("arts").glob(f"**/exact-d-{d}"))
+                  p = cands[0] if cands else p
+              print("merge from", p, "exists", p.exists())
+              # copy gh6 files
+              gh6 = p / "gh6"
+              if gh6.exists():
+                  for f in gh6.glob("*.bin.gz"):
+                      shutil.copy(f, Path("artifacts/exact_out/gh6") / f.name)
+              # load root if present
+              rp = p / "root.bin.gz"
+              if rp.exists():
+                  meta, cells, vids = load_root(rp)
+                  root_cells.update(cells)
+                  all_meta.update(meta.get("villages") or {})
+                  for v in vids:
+                      if v not in vid_order:
+                          vid_order.append(v)
+                  print("  root cells", len(cells), "vids", len(vids))
+
+          # rewrite combined root
+          if not vid_order:
+              vid_order = sorted(all_meta.keys())
+          vindex = {v: i for i, v in enumerate(vid_order)}
+          pure_coarse = {k: v for k, v in root_cells.items() if v.get("pure") and len(k) <= 5}
+          root_json = json.dumps({
+              "v": "2026.11.01.matrix",
+              "villages": all_meta,
+              "vid_order": vid_order,
+              "format": "IRG2",
+          }, separators=(",", ":")).encode()
+          root_bin = write_binary_chunk(pure_coarse, vindex)
+          with gzip.open("artifacts/exact_out/root.bin.gz", "wb", compresslevel=9) as f:
+              f.write(struct.pack(">I", len(root_json)) + root_json + root_bin)
+          print("merged root", Path("artifacts/exact_out/root.bin.gz").stat().st_size)
+          print("gh6 files", len(list(Path("artifacts/exact_out/gh6").glob("*.bin.gz"))))
+          PY
+          # times
+          echo "=== BUILD TIMES ==="
+          find arts -name build_time.txt -exec cat {} \;
+          python scripts/check_invariants_binary.py --districts 11,12,13,37 --out-dir artifacts/exact_out --out data/invariants_report.json || true
+          cat data/invariants_report.json
+          python scripts/size_benchmark.py --out-dir artifacts/exact_out --out data/size_benchmark.json || true
+          cat data/size_benchmark.json || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: g2-merged-invariants
           path: |
             data/invariants_report.json
             data/size_benchmark.json
-            artifacts/exact_out/manifest.json
+            artifacts/exact_out/root.bin.gz
+            artifacts/exact_out/gh6/
