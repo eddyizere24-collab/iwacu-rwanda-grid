@@ -1,0 +1,17 @@
+name: places-search
+concurrency:
+  group: places-search
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+  push:
+    branches: [wip/k]
+    paths: ["packages/places-search/**", ".github/workflows/places_search.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: cd packages/places-search && npm install && npm test
