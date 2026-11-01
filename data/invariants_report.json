@@ -1,195 +1,180 @@
 {
   "decoder": "shipped_binary_longest_prefix",
-  "a_missing_cells": 46594,
+  "a_missing_cells": 0,
   "a_interior_tested": 49314,
-  "a_examples": [
-    {
-      "lat": -1.948765,
-      "lng": 30.052094,
-      "gh9": "kxtkgv5r8",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.94848,
-      "lng": 30.052293,
-      "gh9": "kxtkgv73m",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.949009,
-      "lng": 30.053945,
-      "gh9": "kxtkgvhw5",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.948473,
-      "lng": 30.052556,
-      "gh9": "kxtkgv797",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.948519,
-      "lng": 30.052667,
-      "gh9": "kxtkgv79j",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.948936,
-      "lng": 30.053417,
-      "gh9": "kxtkgvhnx",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.948698,
-      "lng": 30.053,
-      "gh9": "kxtkgv7bj",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.948944,
-      "lng": 30.053777,
-      "gh9": "kxtkgvhqx",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.948166,
-      "lng": 30.052101,
-      "gh9": "kxtkgv770",
-      "expected": "11010101",
-      "got": null
-    },
-    {
-      "lat": -1.949103,
-      "lng": 30.053233,
-      "gh9": "kxtkgvhje",
-      "expected": "11010101",
-      "got": null
-    }
-  ],
+  "a_examples": [],
   "b_pure_ok": 0,
   "b_pure_mismatch": 0,
   "b_pure_mismatch_pct": 0.0,
   "b_examples": [],
   "c_pure_r0_by_quartile": {
-    "Q1": 60.0,
-    "Q2": 100.0,
-    "Q3": 100.0,
-    "Q4": 100.0
+    "Q1": 99.583,
+    "Q2": 99.341,
+    "Q3": 99.907,
+    "Q4": 99.805
   },
   "c_examples": [
     {
-      "lat": -1.961006,
-      "lng": 30.124911,
-      "key": "kxtkve0",
-      "expected": "12130404",
-      "got": "13100305"
+      "lat": -1.912987,
+      "lng": 30.016031,
+      "key": "kxtm55c",
+      "expected": "11020104",
+      "got": "12060702"
     },
     {
-      "lat": -1.960687,
-      "lng": 30.124921,
-      "key": "kxtkve0",
-      "expected": "12130404",
-      "got": "13100305"
+      "lat": -1.939489,
+      "lng": 30.042937,
+      "key": "kxtkgwut",
+      "expected": "11040316",
+      "got": "12020210"
+    },
+    {
+      "lat": -2.031975,
+      "lng": 30.077543,
+      "key": "kxtkkqj",
+      "expected": "11050302",
+      "got": "13020404"
+    },
+    {
+      "lat": -2.031085,
+      "lng": 30.07564,
+      "key": "kxtkkqk",
+      "expected": "11050302",
+      "got": "13020404"
+    },
+    {
+      "lat": -2.018827,
+      "lng": 30.069282,
+      "key": "kxtks0r",
+      "expected": "11050304",
+      "got": "13020404"
+    },
+    {
+      "lat": -1.934628,
+      "lng": 30.053336,
+      "key": "kxtkgzu",
+      "expected": "11060402",
+      "got": "12040201"
+    },
+    {
+      "lat": -1.934215,
+      "lng": 30.052053,
+      "key": "kxtkgzg",
+      "expected": "11060402",
+      "got": "12040201"
+    },
+    {
+      "lat": -1.954761,
+      "lng": 30.075952,
+      "key": "kxtkukh",
+      "expected": "11060703",
+      "got": "13030305"
+    },
+    {
+      "lat": -1.97981,
+      "lng": 30.060385,
+      "key": "kxtksp9",
+      "expected": "11080309",
+      "got": "13070405"
+    },
+    {
+      "lat": -1.963151,
+      "lng": 30.108577,
+      "key": "kxtkv4s7",
+      "expected": "12130301",
+      "got": "13090318"
     }
   ],
   "d_interior_r0_by_quartile": {
-    "Q1": 2.439,
-    "Q2": 2.383,
-    "Q3": 5.489,
-    "Q4": 9.798
+    "Q1": 97.659,
+    "Q2": 99.083,
+    "Q3": 99.634,
+    "Q4": 99.52
   },
-  "d_interior_r0_overall": 5.012,
+  "d_interior_r0_overall": 98.988,
   "d_examples": [
     {
-      "lat": -1.948837,
-      "lng": 30.053384,
-      "gh9": "kxtkgvhpn",
-      "key": null,
-      "expected": "11010101",
-      "got": null
+      "lat": -1.961956,
+      "lng": 30.059398,
+      "gh9": "kxtku4bdf",
+      "key": "kxtku4bdf",
+      "expected": "11010510",
+      "got": "11010509"
     },
     {
-      "lat": -1.948811,
-      "lng": 30.052544,
-      "gh9": "kxtkgv5x7",
-      "key": null,
-      "expected": "11010101",
-      "got": null
+      "lat": -1.912987,
+      "lng": 30.016031,
+      "gh9": "kxtm55c00",
+      "key": "kxtm55c",
+      "expected": "11020104",
+      "got": "12060702"
     },
     {
-      "lat": -1.948335,
-      "lng": 30.052811,
-      "gh9": "kxtkgv7f1",
-      "key": null,
-      "expected": "11010101",
-      "got": null
+      "lat": -1.959563,
+      "lng": 30.050956,
+      "gh9": "kxtkgg62w",
+      "key": "kxtkgg62w",
+      "expected": "11040104",
+      "got": "11040111"
     },
     {
-      "lat": -1.945569,
-      "lng": 30.051812,
-      "gh9": "kxtkgvg41",
-      "key": null,
-      "expected": "11010102",
-      "got": null
+      "lat": -1.956935,
+      "lng": 30.047916,
+      "gh9": "kxtkggb0p",
+      "key": "kxtkggb0p",
+      "expected": "11040114",
+      "got": "11040211"
     },
     {
-      "lat": -1.945733,
-      "lng": 30.052619,
-      "gh9": "kxtkgvg9k",
-      "key": null,
-      "expected": "11010102",
-      "got": null
+      "lat": -1.948279,
+      "lng": 30.048806,
+      "gh9": "kxtkgv2f7",
+      "key": "kxtkgv2f7",
+      "expected": "11040305",
+      "got": "11040310"
     },
     {
-      "lat": -1.946476,
-      "lng": 30.05375,
-      "gh9": "kxtkgvskz",
-      "key": null,
-      "expected": "11010102",
-      "got": null
+      "lat": -1.94896,
+      "lng": 30.04737,
+      "gh9": "kxtkgtpy6",
+      "key": "kxtkgtpy6",
+      "expected": "11040311",
+      "got": "11040310"
     },
     {
-      "lat": -1.944782,
-      "lng": 30.052816,
-      "gh9": "kxtkgvgyc",
-      "key": null,
-      "expected": "11010102",
-      "got": null
+      "lat": -1.939489,
+      "lng": 30.042937,
+      "gh9": "kxtkgwute",
+      "key": "kxtkgwut",
+      "expected": "11040316",
+      "got": "12020210"
     },
     {
-      "lat": -1.944888,
-      "lng": 30.051501,
-      "gh9": "kxtkgvfy4",
-      "key": null,
-      "expected": "11010103",
-      "got": null
+      "lat": -1.939604,
+      "lng": 30.0431,
+      "gh9": "kxtkgwusy",
+      "key": "kxtkgwu",
+      "expected": "11040316",
+      "got": "12020210"
     },
     {
-      "lat": -1.944452,
-      "lng": 30.050536,
-      "gh9": "kxtkgy40s",
-      "key": null,
-      "expected": "11010103",
-      "got": null
+      "lat": -2.031975,
+      "lng": 30.077543,
+      "gh9": "kxtkkqjfc",
+      "key": "kxtkkqj",
+      "expected": "11050302",
+      "got": "13020404"
     },
     {
-      "lat": -1.944293,
-      "lng": 30.051187,
-      "gh9": "kxtkgy49e",
-      "key": null,
-      "expected": "11010103",
-      "got": null
+      "lat": -2.031085,
+      "lng": 30.07564,
+      "gh9": "kxtkkqk2j",
+      "key": "kxtkkqk",
+      "expected": "11050302",
+      "got": "13020404"
     }
   ],
-  "pass_a": false,
+  "pass_a": true,
   "pass_b": true,
   "pass_c": false,
   "pass_d": false,

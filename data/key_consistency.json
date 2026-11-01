@@ -1,0 +1,1027 @@
+{
+  "gh6_files_total": 2571,
+  "sampled": 20,
+  "prefix_mismatches": 165,
+  "mismatch_examples": [
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg140",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg140p",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg140r",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg140x",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg140z",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg141",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg141b",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg141c",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg141f",
+      "prefix": "kxsg14.bin"
+    },
+    {
+      "file": "kxsg14.bin.gz",
+      "key": "kxsg141g",
+      "prefix": "kxsg14.bin"
+    }
+  ],
+  "files": [
+    {
+      "file": "kxsg14.bin.gz",
+      "prefix": "kxsg14.bin",
+      "n_cells": 5745,
+      "first_keys": [
+        {
+          "key": "kxsg140",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg140p",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg140r",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg140x",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg140z",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg141",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg141b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg141c",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg141f",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsg141g",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsf7q.bin.gz",
+      "prefix": "kxsf7q.bin",
+      "n_cells": 27,
+      "first_keys": [
+        {
+          "key": "kxsf7q0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q1",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q2",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q3",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q4",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q5",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q6",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q7",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q8",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf7q9",
+          "len": 7,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxtk7y.bin.gz",
+      "prefix": "kxtk7y.bin",
+      "n_cells": 4227,
+      "first_keys": [
+        {
+          "key": "kxtk7y0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y0b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y1",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y10",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y12",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y18",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y1b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y2",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y3",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtk7y4",
+          "len": 7,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsd7s.bin.gz",
+      "prefix": "kxsd7s.bin",
+      "n_cells": 2715,
+      "first_keys": [
+        {
+          "key": "kxsd7s0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s00",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s000",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s001",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s004",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s005",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s00h",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s00j",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s00n",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsd7s00p",
+          "len": 9,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxtm78.bin.gz",
+      "prefix": "kxtm78.bin",
+      "n_cells": 4391,
+      "first_keys": [
+        {
+          "key": "kxtm780",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm7800",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm7802",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm7808",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm780b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm780c",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm780f",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm780g",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm780u",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtm780v",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxs9yf.bin.gz",
+      "prefix": "kxs9yf.bin",
+      "n_cells": 1,
+      "first_keys": [
+        {
+          "key": "kxs9yfz",
+          "len": 7,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsf22.bin.gz",
+      "prefix": "kxsf22.bin",
+      "n_cells": 5292,
+      "first_keys": [
+        {
+          "key": "kxsf220",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf2200",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf2201",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf2204",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf2205",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf220h",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf220j",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf220n",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf220nb",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf220p",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsf8k.bin.gz",
+      "prefix": "kxsf8k.bin",
+      "n_cells": 4668,
+      "first_keys": [
+        {
+          "key": "kxsf8k0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k00",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k02",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k08",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k0b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k1",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k10",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k1b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k1c",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf8k1f",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxtky7.bin.gz",
+      "prefix": "kxtky7.bin",
+      "n_cells": 5533,
+      "first_keys": [
+        {
+          "key": "kxtky70",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71c",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71f",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71g",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71u",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71v",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71y",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtky71z",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsf3p.bin.gz",
+      "prefix": "kxsf3p.bin",
+      "n_cells": 2269,
+      "first_keys": [
+        {
+          "key": "kxsf3p0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1c",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1f",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1g",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1u",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1v",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1y",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsf3p1z",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsdw0.bin.gz",
+      "prefix": "kxsdw0.bin",
+      "n_cells": 6615,
+      "first_keys": [
+        {
+          "key": "kxsdw00",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw000",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw000p",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw000r",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw000x",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw000z",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw001",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw001p",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw001r",
+          "len": 9,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdw001x",
+          "len": 9,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsdn1.bin.gz",
+      "prefix": "kxsdn1.bin",
+      "n_cells": 2106,
+      "first_keys": [
+        {
+          "key": "kxsdn10",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn11",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn11b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn12",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn13",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn14",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn140",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn142",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn148",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdn14b",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxtmqu.bin.gz",
+      "prefix": "kxtmqu.bin",
+      "n_cells": 3182,
+      "first_keys": [
+        {
+          "key": "kxtmqu0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu1",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu2",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu3",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu4",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu5",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu6",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu7",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu8",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmqu9",
+          "len": 7,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxtmsu.bin.gz",
+      "prefix": "kxtmsu.bin",
+      "n_cells": 2554,
+      "first_keys": [
+        {
+          "key": "kxtmsu0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu00",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu01",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu02",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu03",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu04",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu05",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu06",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu07",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmsu07z",
+          "len": 9,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxs9vk.bin.gz",
+      "prefix": "kxs9vk.bin",
+      "n_cells": 2,
+      "first_keys": [
+        {
+          "key": "kxs9vk",
+          "len": 6,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxs9vk00",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsfck.bin.gz",
+      "prefix": "kxsfck.bin",
+      "n_cells": 5219,
+      "first_keys": [
+        {
+          "key": "kxsfck0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck00",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck01",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck04",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck05",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck0h",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck0j",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck0n",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck0p",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsfck0r",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsf4x.bin.gz",
+      "prefix": "kxsf4x.bin",
+      "n_cells": 1,
+      "first_keys": [
+        {
+          "key": "kxsf4x",
+          "len": 6,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsdhc.bin.gz",
+      "prefix": "kxsdhc.bin",
+      "n_cells": 3859,
+      "first_keys": [
+        {
+          "key": "kxsdhc0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc1",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc2",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc3",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc4",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc4b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc4c",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc4f",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc4g",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxsdhc4u",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxsf4y.bin.gz",
+      "prefix": "kxsf4y.bin",
+      "n_cells": 1,
+      "first_keys": [
+        {
+          "key": "kxsf4y",
+          "len": 6,
+          "prefix_ok": false
+        }
+      ]
+    },
+    {
+      "file": "kxtmpj.bin.gz",
+      "prefix": "kxtmpj.bin",
+      "n_cells": 1801,
+      "first_keys": [
+        {
+          "key": "kxtmpj0",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj1",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj2",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj3",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj4",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj5",
+          "len": 7,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj5b",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj5c",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj5f",
+          "len": 8,
+          "prefix_ok": false
+        },
+        {
+          "key": "kxtmpj5g",
+          "len": 8,
+          "prefix_ok": false
+        }
+      ]
+    }
+  ],
+  "root_key_length_hist": {},
+  "root_n": 0,
+  "pass": false
+}
