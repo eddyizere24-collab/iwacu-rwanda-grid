@@ -1,0 +1,22 @@
+name: do-integrate
+on:
+  push:
+    branches: [wip/run-integrate]
+permissions:
+  contents: write
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch every branch
+        run: git fetch origin '+refs/heads/*:refs/remotes/origin/*'
+      - name: Real merges and guard
+        run: |
+          cp scripts/do_integrate.sh /tmp/do_integrate.sh
+          bash /tmp/do_integrate.sh
+      - name: Push result
+        run: git push origin HEAD:refs/heads/wip/integrate3 || { echo "PUSH REFUSED - report this exact error"; exit 1; }
