@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CHANGED 2026-11-02 CLAUDE: real git merges of the seven GROK branches (g2 g3 g4 g-dissolve offline j k) into
+# CHANGED 2026-11-02 CLAUDE (v2: demo-page commit is conditional): real git merges of the seven GROK branches (g2 g3 g4 g-dissolve offline j k) into
 # one branch; g2/g3/g4 have unrelated histories, so --allow-unrelated-histories is required; see docs/HANDOFF.md
 set -euo pipefail
 REMOTE_PREFIX="${REMOTE_PREFIX:-origin}"
@@ -15,7 +15,11 @@ for b in g2 g3 g4 g-dissolve offline j k; do
 done
 # the branch copies of the demo page load third-party CDNs; keep main's self-hosted page
 git checkout "$REMOTE_PREFIX/main" -- basemap/demo/index.html
-git commit -q -m "[GROK] integrate3: keep main's self-hosted basemap/demo/index.html - no third-party URLs"
+if git diff --cached --quiet; then
+  echo "demo page already equals main - nothing to commit"
+else
+  git commit -q -m "[GROK] integrate3: keep main's self-hosted basemap/demo/index.html - no third-party URLs"
+fi
 echo "== guard"
 fail=0
 for b in g2 g3 g4 g-dissolve offline j k; do
